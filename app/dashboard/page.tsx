@@ -10,7 +10,8 @@ async function getUserData() {
   const token = cookieStore.get("sb-access-token")?.value;
   if (!token) return null;
 
-  const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+  if (authError) console.error("[getUserData] auth error:", authError.message);
   if (!user) return null;
 
   const { data: profile } = await supabaseAdmin

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
@@ -9,7 +10,8 @@ async function getProfileData() {
   const token = cookieStore.get("sb-access-token")?.value;
   if (!token) return null;
 
-  const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+  if (authError) console.error("[getProfileData] auth error:", authError.message);
   if (!user) return null;
 
   const { data: profile } = await supabaseAdmin
@@ -33,20 +35,20 @@ async function getProfileData() {
     .order("started_at", { ascending: false })
     .limit(20);
 
-  return { profile, sessions: sessions ?? [], userId: user.id };
+  return { profile, sessions: sessions ?? [] };
 }
 
 function avgScore(analysis: Array<{ grammar_score: number | null; vocabulary_score: number | null; fluency_score: number | null }>) {
-  if (!analysis.length) return null;
-  const a = analysis[0];
-  const vals = [a.grammar_score, a.vocabulary_score, a.fluency_score].filter((v): v is number => v !== null);
+  const vals = analysis
+    .flatMap((a) => [a.grammar_score, a.vocabulary_score, a.fluency_score])
+    .filter((v): v is number => v !== null);
   if (!vals.length) return null;
   return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
 }
 
 export default async function ProfilePage() {
   const data = await getProfileData();
-  if (!data) return null;
+  if (!data) redirect("/login");
 
   const { profile, sessions } = data;
   const memberSince = profile?.created_at

@@ -25,9 +25,12 @@ export function ProfileDropdown({ email = "", plan = "free" }: ProfileDropdownPr
   }, []);
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      router.push("/login");
+      router.refresh();
+    }
   }
 
   const initials = email ? email[0].toUpperCase() : "?";
