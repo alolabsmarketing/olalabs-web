@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { anthropic } from "@/lib/claude";
+import { supabaseAdmin } from "@/lib/supabase";
+import { getUserIdFromRequest } from "@/lib/auth-server";
 import type { Character } from "@/lib/characters";
 
 function loadCharacter(id: string): Character | undefined {
@@ -13,6 +15,13 @@ function loadCharacter(id: string): Character | undefined {
   }
 }
 
+const MAX_TOKENS: Record<string, number> = {
+  very_short: 80,
+  short: 130,
+  medium: 200,
+  long: 300,
+};
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey || !apiKey.startsWith("sk-ant-")) {
@@ -23,7 +32,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { characterId, scenario, messages, isInitial } = await req.json();
+    const { characterId, scenario, messages, isInitial, sessionId } = await req.json();
 
     const character = loadCharacter(characterId);
     if (!character) {
@@ -35,13 +44,9 @@ export async function POST(req: NextRequest) {
       : "";
 
     const systemPrompt = character.systemPrompt + scenarioPart;
+    const maxTokens = MAX_TOKENS[character.style.responseLength] ?? 150;
 
-    const maxTokens = {
-      very_short: 80,
-      short: 130,
-      medium: 200,
-      long: 300,
-    }[character.style.responseLength] ?? 150;
+    const userId = await getUserIdFromRequest(req);
 
     if (isInitial) {
       const initMessage = scenario
@@ -56,7 +61,26 @@ export async function POST(req: NextRequest) {
       });
 
       const content = response.content[0].type === "text" ? response.content[0].text : "";
-      return NextResponse.json({ content });
+
+      let newSessionId: string | null = null;
+      if (userId) {
+        const { data: session } = await supabaseAdmin
+          .from("sessions")
+          .insert({ user_id: userId, character_id: characterId, scenario: scenario ?? null })
+          .select("id")
+          .single();
+
+        if (session) {
+          newSessionId = session.id;
+          await supabaseAdmin.from("messages").insert({
+            session_id: session.id,
+            role: "assistant",
+            content,
+          });
+        }
+      }
+
+      return NextResponse.json({ content, sessionId: newSessionId });
     }
 
     const apiMessages = messages.map((m: { role: string; content: string }) => ({
@@ -72,6 +96,15 @@ export async function POST(req: NextRequest) {
     });
 
     const content = response.content[0].type === "text" ? response.content[0].text : "";
+
+    if (userId && sessionId) {
+      const lastUserMessage = messages[messages.length - 1];
+      await supabaseAdmin.from("messages").insert([
+        { session_id: sessionId, role: "user", content: lastUserMessage.content },
+        { session_id: sessionId, role: "assistant", content },
+      ]);
+    }
+
     return NextResponse.json({ content });
   } catch (error) {
     console.error("Chat API error:", error);
