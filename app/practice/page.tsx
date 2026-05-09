@@ -76,6 +76,7 @@ function PracticeContent() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null); // null = auth check pending
   const [demoCount, setDemoCount] = useState(0);
   const [showDemoModal, setShowDemoModal] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -111,6 +112,7 @@ function PracticeContent() {
         body: JSON.stringify({ characterId, scenario, messages: [], isInitial: true }),
       });
       const data = await res.json();
+      if (data.sessionId) setSessionId(data.sessionId);
       const content: string =
         !res.ok || !data.content
           ? "[Connection error — please check your API key in .env.local]"
@@ -214,7 +216,7 @@ function PracticeContent() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characterId, scenario, messages: updated }),
+        body: JSON.stringify({ characterId, scenario, messages: updated, sessionId }),
       });
       const data = await res.json();
       const content: string =
@@ -273,7 +275,7 @@ function PracticeContent() {
       const res = await fetch("/api/analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, sessionId }),
       });
       const data = await res.json();
       setAnalysis(data);
