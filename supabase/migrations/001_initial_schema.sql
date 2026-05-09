@@ -117,3 +117,29 @@ $$;
 create trigger on_session_created
   after insert on public.sessions
   for each row execute procedure public.increment_session_count();
+
+-- PROFILES EMAIL UNIQUE CONSTRAINT
+alter table public.profiles add constraint profiles_email_unique unique(email);
+
+-- MESSAGE_COUNT OTOMATİK GÜNCELLEME
+create or replace function public.increment_message_count()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  update public.sessions
+  set message_count = message_count + 1
+  where id = new.session_id;
+  return new;
+end;
+$$;
+
+create trigger on_message_created
+  after insert on public.messages
+  for each row execute procedure public.increment_message_count();
+
+-- PERFORMANS İNDEKSLERİ
+create index idx_sessions_user_id on public.sessions(user_id);
+create index idx_messages_session_id on public.messages(session_id);
+create index idx_analysis_results_session_id on public.analysis_results(session_id);
