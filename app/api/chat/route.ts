@@ -83,10 +83,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ content, sessionId: newSessionId });
     }
 
-    const apiMessages = messages.map((m: { role: string; content: string }) => ({
+    let apiMessages = messages.map((m: { role: string; content: string }) => ({
       role: m.role as "user" | "assistant",
       content: m.content,
     }));
+
+    if (apiMessages.length > 0 && apiMessages[0].role === "assistant") {
+      apiMessages = [{ role: "user", content: "Begin the session." }, ...apiMessages];
+    }
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
