@@ -25,15 +25,22 @@ export default function OnboardingPage() {
   const [level, setLevel] = useState<Level | null>(null);
   const [goal, setGoal] = useState<Goal | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleStart() {
     if (!level || !goal) return;
     setLoading(true);
-    await fetch("/api/onboarding", {
+    setError("");
+    const res = await fetch("/api/onboarding", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ level, goal }),
     });
+    if (!res.ok) {
+      setError("Kaydedilemedi, tekrar dene.");
+      setLoading(false);
+      return;
+    }
     router.replace("/dashboard");
   }
 
@@ -95,6 +102,10 @@ export default function OnboardingPage() {
               </button>
             ))}
           </div>
+
+          {error && (
+            <p className="text-red-400 text-xs text-center mb-3">{error}</p>
+          )}
 
           <button
             type="button"
