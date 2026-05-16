@@ -1,6 +1,6 @@
 // app/api/onboarding/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getUserIdFromRequest } from "@/lib/auth-server";
 
 export async function PATCH(req: NextRequest) {
