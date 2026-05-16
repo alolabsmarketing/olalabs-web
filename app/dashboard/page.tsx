@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { CHARACTERS } from "@/lib/characters";
-import { supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { ArrowRight, MessageCircle, Clock, Star, Settings2 } from "lucide-react";
 

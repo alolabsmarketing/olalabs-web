@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { ArrowLeft, MessageCircle, Star, Calendar } from "lucide-react";
 
