@@ -2,9 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFileSync } from "fs";
 import { join } from "path";
 
+interface CharacterTTS {
+  azureVoiceName?: string;
+  azureStyle?: string;
+  azureStyleDegree?: number;
+  rate?: number;
+  pitch?: number;
+}
+
 interface CharacterConfig {
   id: string;
-  tts: { azureVoiceName?: string };
+  tts: CharacterTTS;
 }
 
 function loadCharacter(id: string): CharacterConfig | undefined {
@@ -31,6 +39,40 @@ function cleanText(text: string): string {
     .trim();
 }
 
+// Convert multiplier (0.88) to percentage string ("-12%")
+function toPercent(value: number): string {
+  const pct = Math.round((value - 1) * 100);
+  return pct >= 0 ? `+${pct}%` : `${pct}%`;
+}
+
+function buildSsml(
+  text: string,
+  voiceName: string,
+  style?: string,
+  styleDegree?: number,
+  rate?: number,
+  pitch?: number
+): string {
+  const rateStr = rate !== undefined && rate !== 1.0 ? ` rate="${toPercent(rate)}"` : "";
+  const pitchStr = pitch !== undefined && pitch !== 1.0 ? ` pitch="${toPercent(pitch)}"` : "";
+  const hasProsody = rateStr || pitchStr;
+
+  const inner = hasProsody ? `<prosody${rateStr}${pitchStr}>${text}</prosody>` : text;
+
+  const styled = style
+    ? `<mstts:express-as style="${style}" styledegree="${styleDegree ?? 1.0}">${inner}</mstts:express-as>`
+    : inner;
+
+  return [
+    `<speak version='1.0'`,
+    ` xmlns='http://www.w3.org/2001/10/synthesis'`,
+    ` xmlns:mstts='http://www.w3.org/2001/mstts'`,
+    ` xml:lang='en-US'>`,
+    `<voice name='${voiceName}'>${styled}</voice>`,
+    `</speak>`,
+  ].join("");
+}
+
 export async function POST(req: NextRequest) {
   const azureKey = process.env.AZURE_SPEECH_KEY;
   const azureRegion = process.env.AZURE_SPEECH_REGION ?? "eastus";
@@ -47,9 +89,17 @@ export async function POST(req: NextRequest) {
     if (!cleaned) return NextResponse.json({ error: "No speakable text" }, { status: 400 });
 
     const character = loadCharacter(characterId);
-    const voiceName = character?.tts?.azureVoiceName ?? "en-US-JennyNeural";
+    const tts = character?.tts ?? {};
+    const voiceName = tts.azureVoiceName ?? "en-US-JennyNeural";
 
-    const ssml = `<speak version='1.0' xml:lang='en-US'><voice name='${voiceName}'>${cleaned}</voice></speak>`;
+    const ssml = buildSsml(
+      cleaned,
+      voiceName,
+      tts.azureStyle,
+      tts.azureStyleDegree,
+      tts.rate,
+      tts.pitch
+    );
 
     const response = await fetch(
       `https://${azureRegion}.tts.speech.microsoft.com/cognitiveservices/v1`,
@@ -58,7 +108,7 @@ export async function POST(req: NextRequest) {
         headers: {
           "Ocp-Apim-Subscription-Key": azureKey,
           "Content-Type": "application/ssml+xml",
-          "X-Microsoft-OutputFormat": "audio-16khz-128kbitrate-mono-mp3",
+          "X-Microsoft-OutputFormat": "audio-24khz-160kbitrate-mono-mp3",
         },
         body: ssml,
       }
