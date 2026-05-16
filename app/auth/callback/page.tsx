@@ -28,18 +28,28 @@ function AuthCallbackContent() {
 
       const { access_token, refresh_token, user } = data.session;
 
-      await fetch("/api/auth/callback", {
+      const cookieRes = await fetch("/api/auth/callback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ access_token, refresh_token }),
       });
+      if (!cookieRes.ok) {
+        router.replace("/login?error=cookie_failed");
+        return;
+      }
 
       // Yeni kullanıcı mı kontrol et (level IS NULL)
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("level")
         .eq("id", user.id)
         .single();
+
+      if (profileError && profileError.code !== "PGRST116") {
+        console.error("Profile query failed:", profileError);
+        router.replace("/login?error=profile_check_failed");
+        return;
+      }
 
       if (!profile?.level) {
         router.replace("/onboarding");
