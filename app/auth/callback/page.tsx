@@ -15,34 +15,53 @@ function AuthCallbackContent() {
 
     async function handleCallback() {
       const code = searchParams.get("code");
-      if (!code) {
-        router.replace("/login?error=missing_code");
-        return;
-      }
 
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-      if (error || !data.session) {
-        router.replace("/login?error=oauth_failed");
-        return;
-      }
+      let sessionTokens: { access_token: string; refresh_token: string; user_id: string } | null = null;
 
-      const { access_token, refresh_token, user } = data.session;
+      if (code) {
+        // PKCE flow: exchange code for session
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error || !data.session) {
+          router.replace("/login?error=oauth_failed");
+          return;
+        }
+        sessionTokens = {
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+          user_id: data.session.user.id,
+        };
+      } else {
+        // Implicit flow: supabase-js auto-parses the hash fragment
+        const { data, error } = await supabase.auth.getSession();
+        if (error || !data.session) {
+          router.replace("/login?error=oauth_failed");
+          return;
+        }
+        sessionTokens = {
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+          user_id: data.session.user.id,
+        };
+      }
 
       const cookieRes = await fetch("/api/auth/callback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ access_token, refresh_token }),
+        body: JSON.stringify({
+          access_token: sessionTokens.access_token,
+          refresh_token: sessionTokens.refresh_token,
+        }),
       });
+
       if (!cookieRes.ok) {
         router.replace("/login?error=cookie_failed");
         return;
       }
 
-      // Yeni kullanıcı mı kontrol et (level IS NULL)
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("level")
-        .eq("id", user.id)
+        .eq("id", sessionTokens.user_id)
         .single();
 
       if (profileError && profileError.code !== "PGRST116") {
