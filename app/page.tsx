@@ -57,6 +57,7 @@ export default function LandingPage() {
 
   const emma = CHARACTERS.find((c) => c.id === "emma")!;
   const noah = CHARACTERS.find((c) => c.id === "noah")!;
+  const sophie = CHARACTERS.find((c) => c.id === "sophie")!;
 
   const heading = TAB_HEADINGS[activeTab];
 
@@ -87,6 +88,9 @@ export default function LandingPage() {
         {/* Right: Auth + Title */}
         <div className="flex flex-col items-end gap-4">
           <div className="flex items-center gap-3">
+            <Link href="/pricing" className="text-white/60 hover:text-white text-sm font-medium transition-colors">
+              Fiyatlar
+            </Link>
             {isLoggedIn ? (
               <Link href="/dashboard" className="ola-btn-white text-sm">
                 Dashboard <ArrowRight size={13} />
@@ -118,7 +122,7 @@ export default function LandingPage() {
 
         {/* OLA Creative: character showcase */}
         {activeTab === "creative" && (
-          <div className="flex items-end justify-center gap-20">
+          <div className="flex items-end justify-center gap-16">
             {/* Noah — smaller, left */}
             <div className="flex flex-col items-center gap-5">
               <Link href={`/practice?character=${noah.id}&auto=true`} className="ola-char-link">
@@ -141,6 +145,17 @@ export default function LandingPage() {
               <div className="text-center">
                 <p className="text-white font-bold text-2xl">{emma.name}</p>
                 <p className="text-blue-300 text-sm mt-0.5">{emma.role}</p>
+              </div>
+            </div>
+
+            {/* Sophie — smaller, right */}
+            <div className="flex flex-col items-center gap-5">
+              <Link href={`/practice?character=${sophie.id}&auto=true`} className="ola-char-link">
+                <div className="ola-circle-sophie" />
+              </Link>
+              <div className="text-center">
+                <p className="text-emerald-300 font-bold text-xl">{sophie.name}</p>
+                <p className="text-white/50 text-sm mt-0.5">{sophie.role}</p>
               </div>
             </div>
           </div>

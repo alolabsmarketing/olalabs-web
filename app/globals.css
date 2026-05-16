@@ -138,6 +138,15 @@ body {
   border: 2px solid rgba(255,255,255,0.30);
 }
 
+.ola-circle-sophie {
+  width: 140px;
+  height: 140px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 38% 35%, #a7f3d0 0%, #34d399 40%, #059669 75%, #064e3b 100%);
+  box-shadow: 0 0 40px rgba(52,211,153,0.30), 0 12px 40px rgba(0,0,40,0.30);
+  border: 2px solid rgba(255,255,255,0.30);
+}
+
 /* FEATURED badge */
 .ola-featured-badge {
   display: inline-flex;
