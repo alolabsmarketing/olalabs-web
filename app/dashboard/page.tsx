@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 import { CHARACTERS } from "@/lib/characters";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
-import { ArrowRight, MessageCircle, Clock, Star, Settings2 } from "lucide-react";
+import { translations, parseLang } from "@/lib/i18n";
+import { ArrowRight, MessageCircle, Clock, Star, Settings2, Check, Zap } from "lucide-react";
 
 async function getUserData() {
   const cookieStore = await cookies();
@@ -16,7 +17,7 @@ async function getUserData() {
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("email, plan, sessions_count, level, goal")
+    .select("email, plan, sessions_count, level, goal, language")
     .eq("id", user.id)
     .single();
 
@@ -53,11 +54,18 @@ async function getUserData() {
     avgScore,
     level: (profile as Record<string, unknown> | null)?.level as string | null ?? null,
     goal: (profile as Record<string, unknown> | null)?.goal as string | null ?? null,
+    language: (profile as Record<string, unknown> | null)?.language as string | null ?? null,
   };
 }
 
 export default async function DashboardPage() {
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get("lang")?.value;
   const userData = await getUserData();
+  const lang = parseLang(userData?.language ?? cookieLang);
+  const T = translations[lang];
+  const Td = T.dashboard;
+
   const featured = CHARACTERS.find((c) => c.featured)!;
   const others = CHARACTERS.filter((c) => !c.featured);
 
@@ -69,23 +77,23 @@ export default async function DashboardPage() {
         <header className="flex items-center justify-between mb-10">
           <Link href="/" className="text-white font-bold text-2xl tracking-tight">OLA</Link>
           <nav className="flex items-center gap-4 text-white/60 text-sm">
-            <Link href="/dashboard" className="text-white font-medium">Home</Link>
+            <Link href="/dashboard" className="text-white font-medium">{Td.nav.home}</Link>
             <Link href="/characters/editor" className="hover:text-white transition-colors flex items-center gap-1.5">
-              <Settings2 size={14} /> Characters
+              <Settings2 size={14} /> {Td.nav.characters}
             </Link>
-            <Link href="/practice" className="hover:text-white transition-colors">Practice</Link>
+            <Link href="/practice" className="hover:text-white transition-colors">{Td.nav.practice}</Link>
             {userData && (
-              <ProfileDropdown email={userData.email} plan={userData.plan} />
+              <ProfileDropdown email={userData.email} plan={userData.plan} lang={lang} />
             )}
           </nav>
         </header>
 
         <div className="mb-10">
           <h2 className="text-white text-2xl font-bold">
-            {userData ? `Welcome back, ${userData.email.split("@")[0]}.` : "Good to see you."}
+            {userData ? Td.welcome(userData.email.split("@")[0]) : "Good to see you."}
           </h2>
           <div className="flex items-center gap-3 mt-1.5">
-            <p className="text-white/50 text-sm">Choose a character and start practicing.</p>
+            <p className="text-white/50 text-sm">{Td.subtitle}</p>
             {userData?.level && (
               <div className="flex items-center gap-1.5">
                 <span className="px-2 py-0.5 rounded-full bg-white/10 text-white/50 text-xs capitalize">{userData.level}</span>
@@ -108,7 +116,7 @@ export default async function DashboardPage() {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-yellow-400 text-xs font-semibold">★ FEATURED</span>
+              <span className="text-yellow-400 text-xs font-semibold">{Td.featured}</span>
             </div>
             <h3 className="text-white text-lg font-bold">{featured.name}</h3>
             <p className="text-blue-300 text-sm">{featured.role}</p>
@@ -118,11 +126,11 @@ export default async function DashboardPage() {
             href={`/practice?character=${featured.id}`}
             className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-[#07112b] font-semibold text-sm hover:bg-white/90 transition-all flex-shrink-0"
           >
-            Start <ArrowRight size={14} />
+            {Td.start} <ArrowRight size={14} />
           </Link>
         </div>
 
-        <h3 className="text-white/70 text-sm font-medium mb-4">All Characters</h3>
+        <h3 className="text-white/70 text-sm font-medium mb-4">{Td.allCharacters}</h3>
         <div className="grid grid-cols-2 gap-4 mb-10">
           {others.map((char) => (
             <Link
@@ -147,17 +155,17 @@ export default async function DashboardPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4 mb-10">
           {[
-            { icon: MessageCircle, label: "Sessions", value: userData ? String(userData.sessionsCount) : "0" },
+            { icon: MessageCircle, label: Td.sessions, value: userData ? String(userData.sessionsCount) : "0" },
             {
               icon: Clock,
-              label: "Hours practiced",
+              label: Td.hoursPracticed,
               value: userData && userData.totalMinutes > 0
                 ? `${Math.floor(userData.totalMinutes / 60)}h ${userData.totalMinutes % 60}m`
                 : "0h",
             },
-            { icon: Star, label: "Avg. score", value: userData?.avgScore ? `${userData.avgScore}%` : "—" },
+            { icon: Star, label: Td.avgScore, value: userData?.avgScore ? `${userData.avgScore}%` : "—" },
           ].map(({ icon: Icon, label, value }) => (
             <div key={label} className="glass-card p-4 text-center">
               <Icon size={20} className="text-white/40 mx-auto mb-2" />
@@ -165,6 +173,49 @@ export default async function DashboardPage() {
               <p className="text-white/50 text-xs">{label}</p>
             </div>
           ))}
+        </div>
+
+        {/* Pricing */}
+        <h3 className="text-white/70 text-sm font-medium mb-4">{Td.plans}</h3>
+        <div className="grid grid-cols-3 gap-4">
+          {(["free", "pro", "family"] as const).map((planId) => {
+            const planNames = { free: "Free", pro: "Pro", family: "Family" };
+            const planPrices = { free: "₺0", pro: "₺149", family: "₺349" };
+            const planPeriods = { free: "", pro: "/ mo", family: "/ mo" };
+            const isCurrent = !userData ? planId === "free" : userData.plan === planId;
+            const highlight = planId === "pro";
+
+            return (
+              <div
+                key={planId}
+                className={`glass-card p-5 flex flex-col gap-3 ${highlight ? "border border-white/20" : ""}`}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-white font-semibold text-sm">{planNames[planId]}</p>
+                  {isCurrent && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">{Td.current}</span>
+                  )}
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-white text-2xl font-bold">{planPrices[planId]}</span>
+                  {planPeriods[planId] && <span className="text-white/40 text-xs">{planPeriods[planId]}</span>}
+                </div>
+                <ul className="flex flex-col gap-1.5 flex-1">
+                  {Td.planFeatures[planId].map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-white/60 text-xs">
+                      <Check size={11} className="text-white/40 flex-shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                {!isCurrent && (
+                  <button className="mt-2 flex items-center justify-center gap-1.5 w-full py-2 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-all">
+                    <Zap size={11} /> {Td.upgrade}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "task-code-review-oauth-onboarding",
+    "key": "code-review-oauth-onboarding",
+    "content": "Task completed: code-review-oauth-onboarding",
+    "namespace": "tasks",
+    "type": "task-outcome",
+    "metadata": {
+      "success": true,
+      "quality": 0.85
+    },
+    "createdAt": 1778948530543
+  }
+]

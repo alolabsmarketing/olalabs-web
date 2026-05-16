@@ -19,7 +19,6 @@ function AuthCallbackContent() {
       let sessionTokens: { access_token: string; refresh_token: string; user_id: string } | null = null;
 
       if (code) {
-        // PKCE flow: exchange code for session
         const { data, error } = await supabase.auth.exchangeCodeForSession(code);
         if (error || !data.session) {
           router.replace("/login?error=oauth_failed");
@@ -31,7 +30,6 @@ function AuthCallbackContent() {
           user_id: data.session.user.id,
         };
       } else {
-        // Implicit flow: supabase-js auto-parses the hash fragment
         const { data, error } = await supabase.auth.getSession();
         if (error || !data.session) {
           router.replace("/login?error=oauth_failed");
@@ -60,7 +58,7 @@ function AuthCallbackContent() {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("level")
+        .select("level, language")
         .eq("id", sessionTokens.user_id)
         .single();
 
@@ -69,6 +67,9 @@ function AuthCallbackContent() {
         router.replace("/login?error=profile_check_failed");
         return;
       }
+
+      const lang = profile?.language ?? "en";
+      document.cookie = `lang=${lang}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
 
       if (!profile?.level) {
         router.replace("/onboarding");
@@ -84,7 +85,7 @@ function AuthCallbackContent() {
     <div className="ola-gradient-bg flex min-h-screen items-center justify-center">
       <div className="ola-wave" />
       <div className="relative z-10 text-center">
-        <p className="text-white/60 text-sm animate-pulse">Giriş yapılıyor...</p>
+        <p className="text-white/60 text-sm animate-pulse">Signing in...</p>
       </div>
     </div>
   );
@@ -97,7 +98,7 @@ export default function AuthCallbackPage() {
         <div className="ola-gradient-bg flex min-h-screen items-center justify-center">
           <div className="ola-wave" />
           <div className="relative z-10 text-center">
-            <p className="text-white/60 text-sm animate-pulse">Giriş yapılıyor...</p>
+            <p className="text-white/60 text-sm animate-pulse">Signing in...</p>
           </div>
         </div>
       }

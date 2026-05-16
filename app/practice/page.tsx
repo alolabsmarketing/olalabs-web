@@ -1,11 +1,20 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, Suspense } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CHARACTERS } from "@/lib/characters";
 import { cn } from "@/lib/utils";
+import { translations, parseLang } from "@/lib/i18n";
 import { Send, Mic, MicOff, ArrowLeft, BarChart2, Volume2, VolumeX, Square, RotateCcw } from "lucide-react";
+
+function useLang() {
+  return useMemo(() => {
+    if (typeof document === "undefined") return parseLang("en");
+    const match = document.cookie.match(/(?:^|;\s*)lang=([^;]+)/);
+    return parseLang(match?.[1]);
+  }, []);
+}
 
 const CHAR_GRADIENTS: Record<string, string> = {
   emma:   "radial-gradient(circle at 38% 35%, #e8d5ff 0%, #c084fc 40%, #7c3aed 75%, #4c1d95 100%)",
@@ -58,6 +67,8 @@ function PracticeContent() {
   const characterId = searchParams.get("character") ?? "emma";
   const autoMode = searchParams.get("auto") === "true";
   const character = CHARACTERS.find((c) => c.id === characterId) ?? CHARACTERS[0];
+  const lang = useLang();
+  const T = translations[lang].practice;
 
   const DEMO_LIMIT = 3;
 
@@ -117,7 +128,7 @@ function PracticeContent() {
       if (data.sessionId) setSessionId(data.sessionId);
       const content: string =
         !res.ok || !data.content
-          ? "Something went wrong. Please try again."
+          ? T.errorMsg
           : data.content;
       const greeting: Message = { role: "assistant", content };
       setMessages([greeting]);
@@ -223,7 +234,7 @@ function PracticeContent() {
       const data = await res.json();
       const content: string =
         !res.ok || !data.content
-          ? "Something went wrong. Please try again."
+          ? T.errorMsg
           : data.content;
       const aiMsg: Message = { role: "assistant", content };
       setMessages([...updated, aiMsg]);
@@ -294,7 +305,7 @@ function PracticeContent() {
         <div className="ola-wave" />
         <div className="relative z-10 w-full max-w-lg">
           <Link href="/" className="flex items-center gap-2 text-white/60 hover:text-white text-sm mb-6 transition-colors">
-            <ArrowLeft size={14} /> Back
+            <ArrowLeft size={14} /> {T.back}
           </Link>
           <div className="glass-card p-8">
             <div className="flex items-center gap-4 mb-6">
@@ -307,7 +318,7 @@ function PracticeContent() {
             <p className="text-white/70 text-sm mb-6">{character.description}</p>
             <div className="mb-4">
               <label className="block text-white/70 text-sm mb-2">
-                Set a scenario <span className="text-white/30">(optional)</span>
+                {T.setScenario} <span className="text-white/30">{T.scenarioOptional}</span>
               </label>
               <textarea
                 value={scenario}
@@ -321,7 +332,7 @@ function PracticeContent() {
               onClick={() => setScenarioSet(true)}
               className="w-full py-2.5 rounded-xl bg-white text-[#07112b] font-semibold text-sm hover:bg-white/90 transition-all"
             >
-              Start practicing
+              {T.startPracticing}
             </button>
           </div>
         </div>
@@ -347,7 +358,7 @@ function PracticeContent() {
               <p className="text-white/40 text-xs">{character.role}</p>
               {isSpeaking && (
                 <span className="text-blue-400 text-xs flex items-center gap-1">
-                  <Volume2 size={10} /> speaking
+                  <Volume2 size={10} /> {T.speakingBadge}
                 </span>
               )}
             </div>
@@ -382,7 +393,7 @@ function PracticeContent() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full glass-pill text-white/70 hover:text-white text-xs font-medium transition-all"
             >
               <BarChart2 size={12} />
-              {analysisLoading ? "Analyzing..." : "Analyze session"}
+              {analysisLoading ? T.analyzing : T.analyzeSession}
             </button>
           )}
           {messages.length > 0 && (
@@ -420,7 +431,7 @@ function PracticeContent() {
           </div>
           <VoiceWave active={isSpeaking || listening} />
           <p className="text-white/40 text-xs mt-2">
-            {listening ? "Listening..." : isSpeaking ? `${character.name} is speaking...` : "Tap the mic to speak"}
+            {listening ? T.listening : isSpeaking ? T.speakingLabel(character.name) : T.tapToSpeak}
           </p>
         </div>
       )}
@@ -447,7 +458,7 @@ function PracticeContent() {
                   />
                 ))}
               </div>
-              {character.name} is preparing...
+              {T.preparing(character.name)}
             </div>
           </div>
         )}
@@ -475,7 +486,7 @@ function PracticeContent() {
                   className="self-start ml-1 flex items-center gap-1 text-white/30 hover:text-white/70 text-xs transition-colors"
                   title="Play audio"
                 >
-                  <Volume2 size={11} /> hear
+                  <Volume2 size={11} /> {T.hear}
                 </button>
               )}
             </div>
@@ -506,9 +517,9 @@ function PracticeContent() {
         <div className="relative z-10 flex justify-center pb-1">
           <span className="text-white/30 text-xs">
             {demoCount >= DEMO_LIMIT
-              ? "Free messages used up — "
-              : `${DEMO_LIMIT - demoCount} free message${DEMO_LIMIT - demoCount === 1 ? "" : "s"} left — `}
-            <a href="/register" className="text-blue-400 hover:text-blue-300">create free account</a>
+              ? `${T.demoExhausted} — `
+              : `${T.demoLeft(DEMO_LIMIT - demoCount)} — `}
+            <a href="/register" className="text-blue-400 hover:text-blue-300">{T.demoCreate}</a>
           </span>
         </div>
       )}
@@ -542,7 +553,7 @@ function PracticeContent() {
               )}
             </button>
             <p className="text-white/40 text-xs">
-              {listening ? "Tap to stop" : "Tap to speak"}
+              {listening ? T.listenStop : T.listenStart}
             </p>
 
             {/* Text fallback in voice mode */}
@@ -553,7 +564,7 @@ function PracticeContent() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") { e.preventDefault(); sendMessage(input); }
                 }}
-                placeholder="Or type instead..."
+                placeholder={T.orType}
                 className="flex-1 bg-white/8 border border-white/15 rounded-xl px-3 py-2 text-white placeholder:text-white/25 focus:outline-none text-xs"
               />
               <button
@@ -569,7 +580,7 @@ function PracticeContent() {
               onClick={() => setVoiceMode(false)}
               className="text-white/30 hover:text-white/60 text-xs transition-colors"
             >
-              Switch to text mode
+              {T.switchToText}
             </button>
           </div>
         ) : (
@@ -613,22 +624,22 @@ function PracticeContent() {
             <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-5">
               <span className="text-2xl">🎯</span>
             </div>
-            <h3 className="text-white font-bold text-xl mb-2">You've used your free messages</h3>
+            <h3 className="text-white font-bold text-xl mb-2">{T.modalTitle}</h3>
             <p className="text-white/60 text-sm mb-6 leading-relaxed">
-              Create a free account to keep practicing with unlimited messages.
+              {T.modalSubtitle}
             </p>
             <div className="flex flex-col gap-3">
               <a
                 href="/register"
                 className="w-full py-3 rounded-xl bg-white text-[#07112b] font-bold text-sm hover:bg-white/90 transition-all text-center block"
               >
-                Create free account
+                {T.modalCreate}
               </a>
               <a
                 href="/login"
                 className="w-full py-3 rounded-xl bg-white/10 text-white font-medium text-sm hover:bg-white/15 transition-all text-center block"
               >
-                Sign in
+                {T.modalSignIn}
               </a>
             </div>
           </div>
@@ -640,15 +651,15 @@ function PracticeContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="glass-card p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-white font-bold text-lg">Session Analysis</h3>
+              <h3 className="text-white font-bold text-lg">{T.sessionAnalysis}</h3>
               <button onClick={() => setShowAnalysis(false)} className="text-white/50 hover:text-white text-xl leading-none">✕</button>
             </div>
 
             <div className="grid grid-cols-3 gap-3 mb-5">
               {[
-                { label: "Grammar", key: "grammar_score" },
-                { label: "Vocabulary", key: "vocabulary_score" },
-                { label: "Fluency", key: "fluency_score" },
+                { label: T.grammar, key: "grammar_score" },
+                { label: T.vocabulary, key: "vocabulary_score" },
+                { label: T.fluency, key: "fluency_score" },
               ].map(({ label, key }) => (
                 <div key={key} className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
                   <p className="text-white font-bold text-2xl">{String(analysis[key] ?? "—")}</p>
@@ -659,7 +670,7 @@ function PracticeContent() {
 
             {(analysis.grammar_errors as unknown[])?.length > 0 && (
               <div className="mb-5">
-                <p className="text-white/70 text-sm font-medium mb-2">Grammar corrections</p>
+                <p className="text-white/70 text-sm font-medium mb-2">{T.grammarCorrections}</p>
                 <div className="space-y-2">
                   {(analysis.grammar_errors as Array<{ original: string; corrected: string; explanation: string }>).map((e, i) => (
                     <div key={i} className="bg-white/5 rounded-lg p-3 text-xs border border-white/8">
@@ -677,7 +688,7 @@ function PracticeContent() {
 
             {(analysis.tips as string[])?.length > 0 && (
               <div className="mb-4">
-                <p className="text-white/70 text-sm font-medium mb-2">Tips for improvement</p>
+                <p className="text-white/70 text-sm font-medium mb-2">{T.improvementTips}</p>
                 <ul className="space-y-2">
                   {(analysis.tips as string[]).map((tip, i) => (
                     <li key={i} className="flex gap-2 text-xs text-white/70">

@@ -2,19 +2,13 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 
 export function GoogleButton() {
   const [loading, setLoading] = useState(false);
 
-  async function handleGoogleLogin() {
+  function handleGoogleLogin() {
     setLoading(true);
-    const redirectTo = `${window.location.origin}/auth/callback`;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
-    if (error) setLoading(false);
+    window.location.href = "/api/auth/google";
   }
 
   return (
@@ -25,7 +19,7 @@ export function GoogleButton() {
       className="w-full py-2.5 rounded-xl bg-white text-[#1a1a2e] font-semibold text-sm hover:bg-white/90 transition-all flex items-center justify-center gap-2.5 disabled:opacity-60 mb-5"
     >
       {loading ? (
-        <span className="text-[#1a1a2e]/60">Yönlendiriliyor...</span>
+        <span className="text-[#1a1a2e]/60">Redirecting...</span>
       ) : (
         <>
           <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -34,7 +28,7 @@ export function GoogleButton() {
             <path fill="#FBBC05" d="M4.51 10.52A4.8 4.8 0 0 1 4.26 9c0-.53.09-1.04.25-1.52V5.41H1.88A8 8 0 0 0 .98 9c0 1.29.31 2.51.9 3.59l2.63-2.07z" />
             <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 8.98 1a8 8 0 0 0-7.1 4.41l2.63 2.07c.63-1.89 2.39-3.3 4.47-3.3z" />
           </svg>
-          Google ile devam et
+          Continue with Google
         </>
       )}
     </button>

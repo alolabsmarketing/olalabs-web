@@ -88,16 +88,13 @@ export default function LandingPage() {
         {/* Right: Auth + Title */}
         <div className="flex flex-col items-end gap-4">
           <div className="flex items-center gap-3">
-            <Link href="/pricing" className="text-white/60 hover:text-white text-sm font-medium transition-colors">
-              Fiyatlar
-            </Link>
             {isLoggedIn ? (
               <Link href="/dashboard" className="ola-btn-white text-sm">
                 Dashboard <ArrowRight size={13} />
               </Link>
             ) : (
               <>
-                <Link href="/login" className="text-white/60 hover:text-white text-sm font-medium transition-colors">
+                <Link href="/login" className="px-4 py-1.5 rounded-full border border-white/30 text-white/80 hover:text-white hover:border-white/60 text-sm font-medium transition-all">
                   Sign in
                 </Link>
                 <Link href="/register" className="ola-btn-white text-sm">
@@ -217,9 +214,6 @@ export default function LandingPage() {
               </button>
             ))}
           </div>
-          <Link href="/register" className="ola-btn-try-ola">
-            Try OLA <ArrowRight size={13} />
-          </Link>
         </div>
       </div>
     </div>
