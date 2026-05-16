@@ -1,8 +1,10 @@
+// app/(auth)/login/page.tsx
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
+import { GoogleButton } from "@/components/GoogleButton";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -48,6 +50,14 @@ export default function LoginPage() {
               {error}
             </div>
           )}
+
+          <GoogleButton />
+
+          <div className="flex items-center gap-3 mb-5">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-white/30 text-xs">veya</span>
+            <div className="flex-1 h-px bg-white/10" />
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
