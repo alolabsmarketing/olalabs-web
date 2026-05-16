@@ -5,11 +5,12 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CHARACTERS } from "@/lib/characters";
 import { cn } from "@/lib/utils";
-import { Send, Mic, MicOff, ArrowLeft, BarChart2, Volume2, VolumeX, Square } from "lucide-react";
+import { Send, Mic, MicOff, ArrowLeft, BarChart2, Volume2, VolumeX, Square, RotateCcw } from "lucide-react";
 
 const CHAR_GRADIENTS: Record<string, string> = {
-  emma: "radial-gradient(circle at 38% 35%, #e8d5ff 0%, #c084fc 40%, #7c3aed 75%, #4c1d95 100%)",
-  noah: "radial-gradient(circle at 38% 35%, #bfdbfe 0%, #60a5fa 40%, #2563eb 75%, #1e3a8a 100%)",
+  emma:   "radial-gradient(circle at 38% 35%, #e8d5ff 0%, #c084fc 40%, #7c3aed 75%, #4c1d95 100%)",
+  noah:   "radial-gradient(circle at 38% 35%, #bfdbfe 0%, #60a5fa 40%, #2563eb 75%, #1e3a8a 100%)",
+  sophie: "radial-gradient(circle at 38% 35%, #a7f3d0 0%, #34d399 40%, #059669 75%, #064e3b 100%)",
 };
 
 function CharacterDot({ characterId, size, className }: { characterId: string; size: number; className?: string }) {
@@ -64,6 +65,7 @@ function PracticeContent() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [voiceMode, setVoiceMode] = useState(autoMode);
+  const [sessionEnded, setSessionEnded] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [listening, setListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -115,7 +117,7 @@ function PracticeContent() {
       if (data.sessionId) setSessionId(data.sessionId);
       const content: string =
         !res.ok || !data.content
-          ? "[Connection error — please check your API key in .env.local]"
+          ? "Something went wrong. Please try again."
           : data.content;
       const greeting: Message = { role: "assistant", content };
       setMessages([greeting]);
@@ -221,7 +223,7 @@ function PracticeContent() {
       const data = await res.json();
       const content: string =
         !res.ok || !data.content
-          ? "[Connection error — please check your API key in .env.local]"
+          ? "Something went wrong. Please try again."
           : data.content;
       const aiMsg: Message = { role: "assistant", content };
       setMessages([...updated, aiMsg]);
@@ -383,6 +385,23 @@ function PracticeContent() {
               {analysisLoading ? "Analyzing..." : "Analyze session"}
             </button>
           )}
+          {messages.length > 0 && (
+            <button
+              onClick={() => {
+                stopAudio();
+                setMessages([]);
+                setSessionId(null);
+                setInitialized(false);
+                setAnalysis(null);
+                setShowAnalysis(false);
+                setSessionEnded(false);
+              }}
+              title="New session"
+              className="p-2 rounded-full glass-pill text-white/50 hover:text-white transition-all"
+            >
+              <RotateCcw size={14} />
+            </button>
+          )}
         </div>
       </header>
 
@@ -487,9 +506,9 @@ function PracticeContent() {
         <div className="relative z-10 flex justify-center pb-1">
           <span className="text-white/30 text-xs">
             {demoCount >= DEMO_LIMIT
-              ? "Demo sürüm tükendi — "
-              : `${DEMO_LIMIT - demoCount} ücretsiz mesaj kaldı — `}
-            <a href="/register" className="text-blue-400 hover:text-blue-300">ücretsiz üye ol</a>
+              ? "Free messages used up — "
+              : `${DEMO_LIMIT - demoCount} free message${DEMO_LIMIT - demoCount === 1 ? "" : "s"} left — `}
+            <a href="/register" className="text-blue-400 hover:text-blue-300">create free account</a>
           </span>
         </div>
       )}
@@ -594,22 +613,22 @@ function PracticeContent() {
             <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-5">
               <span className="text-2xl">🎯</span>
             </div>
-            <h3 className="text-white font-bold text-xl mb-2">Demo sürüm bitti</h3>
+            <h3 className="text-white font-bold text-xl mb-2">You've used your free messages</h3>
             <p className="text-white/60 text-sm mb-6 leading-relaxed">
-              {DEMO_LIMIT} ücretsiz mesajını kullandın. Sınırsız pratik için ücretsiz hesap oluştur.
+              Create a free account to keep practicing with unlimited messages.
             </p>
             <div className="flex flex-col gap-3">
               <a
                 href="/register"
                 className="w-full py-3 rounded-xl bg-white text-[#07112b] font-bold text-sm hover:bg-white/90 transition-all text-center block"
               >
-                Ücretsiz hesap oluştur
+                Create free account
               </a>
               <a
                 href="/login"
                 className="w-full py-3 rounded-xl bg-white/10 text-white font-medium text-sm hover:bg-white/15 transition-all text-center block"
               >
-                Giriş yap
+                Sign in
               </a>
             </div>
           </div>

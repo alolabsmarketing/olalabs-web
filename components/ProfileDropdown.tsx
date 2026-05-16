@@ -58,13 +58,13 @@ export function ProfileDropdown({ email = "", plan = "free" }: ProfileDropdownPr
             onClick={() => { setOpen(false); router.push("/profile"); }}
             className="w-full flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/10 transition-colors text-sm"
           >
-            <User size={14} /> Profil
+            <User size={14} /> Profile
           </button>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-white/10 transition-colors text-sm"
           >
-            <LogOut size={14} /> Çıkış Yap
+            <LogOut size={14} /> Sign out
           </button>
         </div>
       )}

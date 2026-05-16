@@ -16,7 +16,7 @@ async function getUserData() {
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("email, plan, sessions_count")
+    .select("email, plan, sessions_count, level, goal")
     .eq("id", user.id)
     .single();
 
@@ -51,6 +51,8 @@ async function getUserData() {
     sessionsCount: profile?.sessions_count ?? 0,
     totalMinutes,
     avgScore,
+    level: (profile as Record<string, unknown> | null)?.level as string | null ?? null,
+    goal: (profile as Record<string, unknown> | null)?.goal as string | null ?? null,
   };
 }
 
@@ -80,9 +82,19 @@ export default async function DashboardPage() {
 
         <div className="mb-10">
           <h2 className="text-white text-2xl font-bold">
-            {userData ? `Hoş geldin, ${userData.email.split("@")[0]}.` : "Good to see you."}
+            {userData ? `Welcome back, ${userData.email.split("@")[0]}.` : "Good to see you."}
           </h2>
-          <p className="text-white/50 text-sm mt-1">Choose a character and start practicing.</p>
+          <div className="flex items-center gap-3 mt-1.5">
+            <p className="text-white/50 text-sm">Choose a character and start practicing.</p>
+            {userData?.level && (
+              <div className="flex items-center gap-1.5">
+                <span className="px-2 py-0.5 rounded-full bg-white/10 text-white/50 text-xs capitalize">{userData.level}</span>
+                {userData.goal && (
+                  <span className="px-2 py-0.5 rounded-full bg-white/10 text-white/50 text-xs capitalize">{userData.goal}</span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="glass-card p-6 mb-6 flex items-center gap-6">
