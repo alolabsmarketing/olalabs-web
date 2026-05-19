@@ -25,3 +25,29 @@ Return ONLY valid JSON in this exact structure:
   "tips": [string, string, string],
   "summary": string
 }`;
+
+export function buildAnalysisPrompt(nativeLanguage: string, practiceLanguage: string): string {
+  return `You are an expert ${practiceLanguage} language assessor. Review the following conversation between a student and an AI language tutor.
+Provide ALL feedback, explanations, tips, and the summary in ${nativeLanguage} (the student's native language).
+Only the JSON keys stay in English. All string values visible to the user must be in ${nativeLanguage}.
+
+Evaluate:
+1. Grammar accuracy (score 0-100)
+2. Vocabulary range (score 0-100)
+3. Fluency/coherence (score 0-100)
+4. Specific grammar mistakes found
+5. Vocabulary suggestions (better word choices)
+6. 3 actionable improvement tips
+
+Return ONLY valid JSON in this exact structure:
+{
+  "grammar_score": number,
+  "vocabulary_score": number,
+  "fluency_score": number,
+  "overall_score": number,
+  "grammar_errors": [{"original": string, "corrected": string, "explanation": string}],
+  "vocabulary_suggestions": [{"word": string, "alternatives": string[], "context": string}],
+  "tips": [string, string, string],
+  "summary": string
+}`
+}
