@@ -7,6 +7,8 @@ import { CHARACTERS } from "@/lib/characters";
 import { cn } from "@/lib/utils";
 import { translations, parseLang } from "@/lib/i18n";
 import { Send, Mic, MicOff, ArrowLeft, BarChart2, Volume2, VolumeX, Square, RotateCcw } from "lucide-react";
+import UpgradeModal, { type UpgradeReason } from "@/components/UpgradeModal";
+import { getPlanLimits } from "@/lib/plan";
 
 function useLang() {
   return useMemo(() => {
@@ -90,6 +92,8 @@ function PracticeContent() {
   const [demoCount, setDemoCount] = useState(0);
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [upgradeReason, setUpgradeReason] = useState<UpgradeReason | null>(null);
+  const [sessionMinutes, setSessionMinutes] = useState<number>(5);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -105,7 +109,10 @@ function PracticeContent() {
       .then((r) => r.json())
       .then((d) => {
         setIsLoggedIn(d.loggedIn);
-        if (!d.loggedIn) {
+        if (d.loggedIn) {
+          const limits = getPlanLimits(d.plan);
+          setSessionMinutes(limits.sessionMinutes === Infinity ? Infinity : limits.sessionMinutes);
+        } else {
           const stored = parseInt(localStorage.getItem("ola_demo_count") ?? "0", 10);
           setDemoCount(stored);
           if (stored >= DEMO_LIMIT) setShowDemoModal(true);
@@ -124,12 +131,16 @@ function PracticeContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ characterId, scenario, messages: [], isInitial: true }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { error?: string };
+        if (err.error === "SESSION_LIMIT") { setUpgradeReason("session_limit"); return; }
+        if (err.error === "CHARACTER_LOCKED") { setUpgradeReason("locked_character"); return; }
+        setMessages([{ role: "assistant", content: T.errorMsg }]);
+        return;
+      }
       const data = await res.json();
       if (data.sessionId) setSessionId(data.sessionId);
-      const content: string =
-        !res.ok || !data.content
-          ? T.errorMsg
-          : data.content;
+      const content: string = data.content ?? T.errorMsg;
       const greeting: Message = { role: "assistant", content };
       setMessages([greeting]);
       // Don't auto-play initial greeting — no user interaction yet (browser autoplay policy)
@@ -144,6 +155,18 @@ function PracticeContent() {
       sendInitialGreeting();
     }
   }, [scenarioSet, initialized, sendInitialGreeting]);
+
+  useEffect(() => {
+    if (!initialized || sessionMinutes === Infinity) return;
+    const deadline = Date.now() + sessionMinutes * 60 * 1000;
+    const id = setInterval(() => {
+      if (Date.now() >= deadline) {
+        clearInterval(id);
+        setUpgradeReason("session_time");
+      }
+    }, 15_000);
+    return () => clearInterval(id);
+  }, [initialized, sessionMinutes]);
 
   function cleanTextForTTS(text: string): string {
     return text
@@ -197,6 +220,10 @@ function PracticeContent() {
         body: JSON.stringify({ text: cleaned, characterId }),
       });
       if (!res.ok) {
+        if (res.status === 403) {
+          const err = await res.json().catch(() => ({})) as { error?: string };
+          if (err.error === "VOICE_LIMIT") { setUpgradeReason("voice_limit"); setIsSpeaking(false); return; }
+        }
         speakWithBrowser(cleaned);
         return;
       }
@@ -644,6 +671,10 @@ function PracticeContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {upgradeReason && (
+        <UpgradeModal reason={upgradeReason} onClose={() => setUpgradeReason(null)} />
       )}
 
       {/* Analysis modal */}

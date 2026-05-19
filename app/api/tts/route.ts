@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { getUserIdFromRequest } from "@/lib/auth-server";
+import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getPlanLimits, estimateVoiceSeconds } from "@/lib/plan";
 
 interface CharacterTTS {
   azureVoiceName?: string;
@@ -84,6 +87,39 @@ export async function POST(req: NextRequest) {
   try {
     const { text, characterId } = await req.json();
     if (!text?.trim()) return NextResponse.json({ error: "No text provided" }, { status: 400 });
+
+    const userId = await getUserIdFromRequest(req);
+    if (userId) {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("plan")
+        .eq("id", userId)
+        .single();
+      const userPlan = (profile as { plan?: string } | null)?.plan ?? "free";
+      const limits = getPlanLimits(userPlan);
+
+      if (limits.voiceMinutesPerDay !== Infinity) {
+        const maxSeconds = limits.voiceMinutesPerDay * 60;
+        const today = new Date().toISOString().split("T")[0];
+        const { data: usage } = await supabaseAdmin
+          .from("daily_usage")
+          .select("voice_seconds")
+          .eq("user_id", userId)
+          .eq("date", today)
+          .single();
+
+        const used = (usage as { voice_seconds?: number } | null)?.voice_seconds ?? 0;
+        if (used >= maxSeconds) {
+          return NextResponse.json({ error: "VOICE_LIMIT" }, { status: 403 });
+        }
+
+        const estimated = estimateVoiceSeconds(text);
+        await supabaseAdmin.from("daily_usage").upsert(
+          { user_id: userId, date: today, voice_seconds: Math.min(used + estimated, maxSeconds) },
+          { onConflict: "user_id,date" }
+        );
+      }
+    }
 
     const cleaned = cleanText(text);
     if (!cleaned) return NextResponse.json({ error: "No speakable text" }, { status: 400 });

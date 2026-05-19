@@ -5,6 +5,7 @@ import { anthropic } from "@/lib/claude";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getUserIdFromRequest } from "@/lib/auth-server";
 import type { Character } from "@/lib/characters";
+import { getPlanLimits, canUseCharacter } from "@/lib/plan";
 
 function loadCharacter(id: string): Character | undefined {
   try {
@@ -49,6 +50,41 @@ export async function POST(req: NextRequest) {
     const userId = await getUserIdFromRequest(req);
 
     if (isInitial) {
+      if (userId) {
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("plan")
+          .eq("id", userId)
+          .single();
+
+        const userPlan = (profile as { plan?: string } | null)?.plan ?? "free";
+        const limits = getPlanLimits(userPlan);
+
+        if (limits.sessionsPerDay !== Infinity) {
+          const today = new Date().toISOString().split("T")[0];
+          const { data: usage } = await supabaseAdmin
+            .from("daily_usage")
+            .select("session_count")
+            .eq("user_id", userId)
+            .eq("date", today)
+            .single();
+
+          const count = (usage as { session_count?: number } | null)?.session_count ?? 0;
+          if (count >= limits.sessionsPerDay) {
+            return NextResponse.json({ error: "SESSION_LIMIT" }, { status: 403 });
+          }
+
+          await supabaseAdmin.from("daily_usage").upsert(
+            { user_id: userId, date: today, session_count: count + 1 },
+            { onConflict: "user_id,date" }
+          );
+        }
+
+        if (!canUseCharacter(userPlan, characterId)) {
+          return NextResponse.json({ error: "CHARACTER_LOCKED" }, { status: 403 });
+        }
+      }
+
       const initMessage = scenario
         ? `The user wants to practice English. Start the session in character. The scenario is: "${scenario}". Open the conversation naturally as your character would in this situation.`
         : "The user wants to practice English. Start the session with a natural opening that reflects your character. Don't say 'How can I help you?' — open in a way that's true to who you are.";
