@@ -10,7 +10,7 @@ create table if not exists public.scenarios (
   practice_language text not null default 'en',
   min_plan        text not null default 'free' check (min_plan in ('free','pro','premium')),
   sort_order      int not null default 0,
-  created_at      timestamptz default now()
+  created_at      timestamptz not null default now()
 );
 
 alter table public.scenarios enable row level security;

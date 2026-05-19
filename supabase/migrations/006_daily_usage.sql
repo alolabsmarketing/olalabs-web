@@ -1,8 +1,8 @@
 create table if not exists public.daily_usage (
   user_id       uuid not null references auth.users on delete cascade,
   date          date not null default current_date,
-  session_count int not null default 0,
-  voice_seconds int not null default 0,
+  session_count int not null default 0 check (session_count >= 0),
+  voice_seconds int not null default 0 check (voice_seconds >= 0),
   primary key (user_id, date)
 );
 
