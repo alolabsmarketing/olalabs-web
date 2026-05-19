@@ -5,6 +5,8 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { translations, parseLang } from "@/lib/i18n";
 import { ArrowRight, MessageCircle, Clock, Star, Settings2, Check, Zap } from "lucide-react";
+import { canUseCharacter } from "@/lib/plan";
+import CharacterCard from "@/components/CharacterCard";
 
 async function getUserData() {
   const cookieStore = await cookies();
@@ -133,25 +135,12 @@ export default async function DashboardPage() {
         <h3 className="text-white/70 text-sm font-medium mb-4">{Td.allCharacters}</h3>
         <div className="grid grid-cols-2 gap-4 mb-10">
           {others.map((char) => (
-            <Link
+            <CharacterCard
               key={char.id}
-              href={`/practice?character=${char.id}`}
-              className="glass-card p-5 flex items-center gap-4 hover:bg-white/10 transition-all"
-            >
-              <div
-                className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center border border-white/20"
-                style={{ background: `radial-gradient(circle, ${char.color}30, transparent)` }}
-              >
-                <span className="text-sm font-bold" style={{ color: char.color }}>
-                  {char.avatarInitials}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-semibold text-sm">{char.name}</p>
-                <p className="text-white/50 text-xs truncate">{char.role}</p>
-              </div>
-              <ArrowRight size={14} className="text-white/30 flex-shrink-0" />
-            </Link>
+              character={char}
+              locked={!canUseCharacter(userData?.plan, char.id)}
+              label={Td.start}
+            />
           ))}
         </div>
 
