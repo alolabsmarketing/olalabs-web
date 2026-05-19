@@ -9,6 +9,7 @@ import { translations, parseLang } from "@/lib/i18n";
 import { Send, Mic, MicOff, ArrowLeft, BarChart2, Volume2, VolumeX, Square, RotateCcw } from "lucide-react";
 import UpgradeModal, { type UpgradeReason } from "@/components/UpgradeModal";
 import { getPlanLimits } from "@/lib/plan";
+import ScenarioSelector from "@/components/ScenarioSelector";
 
 function useLang() {
   return useMemo(() => {
@@ -343,24 +344,12 @@ function PracticeContent() {
               </div>
             </div>
             <p className="text-white/70 text-sm mb-6">{character.description}</p>
-            <div className="mb-4">
-              <label className="block text-white/70 text-sm mb-2">
-                {T.setScenario} <span className="text-white/30">{T.scenarioOptional}</span>
-              </label>
-              <textarea
-                value={scenario}
-                onChange={(e) => setScenario(e.target.value)}
-                placeholder={`e.g. "I'm going for a US visa interview" or "I want to order food at a restaurant"`}
-                rows={3}
-                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400/60 transition-colors text-sm resize-none"
-              />
-            </div>
-            <button
-              onClick={() => setScenarioSet(true)}
-              className="w-full py-2.5 rounded-xl bg-white text-[#07112b] font-semibold text-sm hover:bg-white/90 transition-all"
-            >
-              {T.startPracticing}
-            </button>
+            <ScenarioSelector
+              onSelect={(text) => {
+                setScenario(text);
+                setScenarioSet(true);
+              }}
+            />
           </div>
         </div>
       </div>
