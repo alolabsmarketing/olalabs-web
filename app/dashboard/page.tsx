@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { translations, parseLang } from "@/lib/i18n";
 import { ArrowRight, MessageCircle, Clock, Star, Settings2, Check, Zap } from "lucide-react";
+import CheckoutButton from "@/components/CheckoutButton";
 import { canUseCharacter } from "@/lib/plan";
 import CharacterCard from "@/components/CharacterCard";
 
@@ -167,10 +168,10 @@ export default async function DashboardPage() {
         {/* Pricing */}
         <h3 className="text-white/70 text-sm font-medium mb-4">{Td.plans}</h3>
         <div className="grid grid-cols-3 gap-4">
-          {(["free", "pro", "family"] as const).map((planId) => {
-            const planNames = { free: "Free", pro: "Pro", family: "Family" };
-            const planPrices = { free: "₺0", pro: "₺149", family: "₺349" };
-            const planPeriods = { free: "", pro: "/ mo", family: "/ mo" };
+          {(["free", "pro", "premium"] as const).map((planId) => {
+            const planNames = { free: "Free", pro: "Pro", premium: "Premium" };
+            const planPrices = { free: "$0", pro: "$9", premium: "$19" };
+            const planPeriods = { free: "", pro: "/ mo", premium: "/ mo" };
             const isCurrent = !userData ? planId === "free" : userData.plan === planId;
             const highlight = planId === "pro";
 
@@ -197,10 +198,17 @@ export default async function DashboardPage() {
                     </li>
                   ))}
                 </ul>
-                {!isCurrent && (
-                  <button className="mt-2 flex items-center justify-center gap-1.5 w-full py-2 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-all">
+                {!isCurrent && planId !== "free" && (
+                  <CheckoutButton
+                    plan={planId}
+                    label={`${Td.upgrade} ${planNames[planId]}`}
+                    className="mt-2 flex items-center justify-center gap-1.5 w-full py-2 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-all"
+                  />
+                )}
+                {!isCurrent && planId === "free" && (
+                  <a href="/register" className="mt-2 flex items-center justify-center gap-1.5 w-full py-2 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-all text-center">
                     <Zap size={11} /> {Td.upgrade}
-                  </button>
+                  </a>
                 )}
               </div>
             );

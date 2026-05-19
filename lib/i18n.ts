@@ -33,7 +33,7 @@ const en = {
     planFeatures: {
       free: ["5 sessions / month", "2 characters", "Basic feedback"] as string[],
       pro: ["Unlimited sessions", "All characters", "Detailed analysis", "Voice practice"] as string[],
-      family: ["Up to 4 accounts", "All Pro features", "Shared progress", "Priority support"] as string[],
+      premium: ["Unlimited everything", "Progress charts & streaks", "All characters & scenarios", "Priority support"] as string[],
     },
     nav: { home: "Home", characters: "Characters", practice: "Practice" },
   },
@@ -105,7 +105,7 @@ const tr: typeof en = {
     planFeatures: {
       free: ["Ayda 5 oturum", "2 karakter", "Temel geri bildirim"],
       pro: ["Sınırsız oturum", "Tüm karakterler", "Detaylı analiz", "Sesli pratik"],
-      family: ["4'e kadar hesap", "Tüm Pro özellikler", "Ortak ilerleme", "Öncelikli destek"],
+      premium: ["Sınırsız her şey", "İlerleme grafikleri", "Tüm karakter ve senaryolar", "Öncelikli destek"],
     },
     nav: { home: "Ana Sayfa", characters: "Karakterler", practice: "Pratik" },
   },
@@ -145,7 +145,7 @@ const tr: typeof en = {
     profile: "Profil",
     signOut: "Çıkış Yap",
     planLabel: (plan: string) => {
-      const map: Record<string, string> = { free: "ücretsiz", pro: "pro", family: "aile" };
+      const map: Record<string, string> = { free: "ücretsiz", pro: "pro", premium: "premium" };
       return `${map[plan] ?? plan} plan`;
     },
   },
