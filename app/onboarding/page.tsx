@@ -2,143 +2,157 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { translations, type Lang } from "@/lib/i18n";
+import { NATIVE_LANGUAGES, PRACTICE_LANGUAGES } from "@/lib/languages";
 
-type Level = "beginner" | "intermediate" | "advanced";
-type Goal = "travel" | "work" | "casual" | "exam";
+type Step = "native" | "practice" | "level" | "goal";
+const STEPS: Step[] = ["native", "practice", "level", "goal"];
 
-const LEVEL_VALUES: Level[] = ["beginner", "intermediate", "advanced"];
-const LEVEL_ICONS: Record<Level, string> = { beginner: "🌱", intermediate: "📈", advanced: "🚀" };
-
-const GOAL_VALUES: Goal[] = ["travel", "work", "casual", "exam"];
-const GOAL_ICONS: Record<Goal, string> = { travel: "✈️", work: "💼", casual: "💬", exam: "📚" };
+const LEVELS = ["beginner", "intermediate", "advanced"] as const;
+const GOALS  = ["travel", "work", "casual", "exam"] as const;
+const LEVEL_LABELS: Record<string, string> = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" };
+const GOAL_LABELS:  Record<string, string> = { travel: "✈️ Travel", work: "💼 Work", casual: "💬 Casual", exam: "📚 Exam" };
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [language, setLanguage] = useState<Lang>("en");
-  const [level, setLevel] = useState<Level | null>(null);
-  const [goal, setGoal] = useState<Goal | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [step, setStep] = useState<Step>("native");
+  const [nativeLang, setNativeLang]     = useState("");
+  const [practiceLang, setPracticeLang] = useState("");
+  const [level, setLevel] = useState("");
+  const [goal, setGoal]   = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState("");
 
-  const T = translations[language].onboarding;
+  const stepIndex = STEPS.indexOf(step);
 
-  async function handleStart() {
-    if (!level || !goal) return;
-    setLoading(true);
+  async function save() {
+    setSaving(true);
     setError("");
-    const res = await fetch("/api/onboarding", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ level, goal, language }),
-    });
-    if (!res.ok) {
-      setError(T.error);
-      setLoading(false);
-      return;
+    try {
+      const res = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ native_language: nativeLang, practice_language: practiceLang, level, goal }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      router.push("/dashboard");
+    } catch {
+      setError("Failed to save. Try again.");
+      setSaving(false);
     }
-    router.replace("/dashboard");
-  }
-
-  function handleSkip() {
-    router.replace("/dashboard");
   }
 
   return (
-    <div className="ola-gradient-bg relative flex min-h-screen items-center justify-center p-4">
+    <div className="ola-gradient-bg relative min-h-screen flex items-center justify-center p-4">
       <div className="ola-wave" />
-      <div className="relative z-10 w-full max-w-md">
-        <div className="glass-card p-8">
-          <div className="text-center mb-8">
-            <div className="text-4xl mb-3">👋</div>
-            <h2 className="text-white text-xl font-bold">{T.title}</h2>
-            <p className="text-white/50 text-sm mt-1">{T.subtitle}</p>
-          </div>
+      <div className="relative z-10 w-full max-w-lg">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Welcome to OLA</h1>
+          <p className="text-white/60 text-sm">Quick setup — takes 30 seconds</p>
+        </div>
 
-          {/* Language selection — always bilingual */}
-          <p className="text-white/40 text-xs font-semibold uppercase tracking-widest mb-3">
-            {T.selectLanguage}
-          </p>
-          <div className="grid grid-cols-2 gap-2 mb-6">
-            {(["en", "tr"] as Lang[]).map((lang) => (
-              <button
-                key={lang}
-                type="button"
-                onClick={() => setLanguage(lang)}
-                className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border text-sm font-medium transition-all ${
-                  language === lang
-                    ? "bg-blue-500/15 border-blue-400 text-white"
-                    : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                <span className="text-lg">{lang === "en" ? "🇺🇸" : "🇹🇷"}</span>
-                {lang === "en" ? "English" : "Türkçe"}
-              </button>
-            ))}
-          </div>
+        {/* Progress dots */}
+        <div className="flex justify-center gap-2 mb-8">
+          {STEPS.map((s, i) => (
+            <div key={s} className={`w-2 h-2 rounded-full transition-colors ${i <= stepIndex ? "bg-white" : "bg-white/20"}`} />
+          ))}
+        </div>
 
-          <p className="text-white/40 text-xs font-semibold uppercase tracking-widest mb-3">
-            {T.selectLevel}
-          </p>
-          <div className="grid grid-cols-3 gap-2 mb-6">
-            {LEVEL_VALUES.map((l) => (
-              <button
-                key={l}
-                type="button"
-                onClick={() => setLevel(l)}
-                className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-sm font-medium transition-all ${
-                  level === l
-                    ? "bg-blue-500/15 border-blue-400 text-white"
-                    : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                <span className="text-xl">{LEVEL_ICONS[l]}</span>
-                {T.levels[l]}
-              </button>
-            ))}
-          </div>
+        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8">
 
-          <p className="text-white/40 text-xs font-semibold uppercase tracking-widest mb-3">
-            {T.selectGoal}
-          </p>
-          <div className="grid grid-cols-4 gap-2 mb-8">
-            {GOAL_VALUES.map((g) => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => setGoal(g)}
-                className={`flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl border text-xs font-medium transition-all ${
-                  goal === g
-                    ? "bg-blue-500/15 border-blue-400 text-white"
-                    : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                <span className="text-xl">{GOAL_ICONS[g]}</span>
-                {T.goals[g]}
-              </button>
-            ))}
-          </div>
-
-          {error && (
-            <p className="text-red-400 text-xs text-center mb-3">{error}</p>
+          {step === "native" && (
+            <>
+              <h2 className="text-white font-semibold text-lg mb-1">What's your native language?</h2>
+              <p className="text-white/50 text-sm mb-6">We'll use this for explanations and corrections</p>
+              <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+                {NATIVE_LANGUAGES.map((lang) => (
+                  <button key={lang.code}
+                    onClick={() => { setNativeLang(lang.code); setStep("practice"); }}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
+                      nativeLang === lang.code ? "bg-white/20 border-white/60" : "bg-white/5 border-white/10 hover:bg-white/10"
+                    }`}
+                  >
+                    <span className="text-xl">{lang.flag}</span>
+                    <span className="text-sm font-medium text-white">{lang.name}</span>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
 
-          <button
-            type="button"
-            onClick={handleStart}
-            disabled={!level || !goal || loading}
-            className="w-full py-2.5 rounded-xl bg-white text-[#07112b] font-semibold text-sm hover:bg-white/90 transition-all disabled:opacity-40 mb-3"
-          >
-            {loading ? T.saving : T.start}
-          </button>
+          {step === "practice" && (
+            <>
+              <h2 className="text-white font-semibold text-lg mb-1">Which language do you want to practice?</h2>
+              <p className="text-white/50 text-sm mb-6">The app will immerse you in this language</p>
+              <div className="flex flex-col gap-3">
+                {PRACTICE_LANGUAGES.map((lang) => (
+                  <button key={lang.code}
+                    disabled={!lang.available}
+                    onClick={() => { if (lang.available) { setPracticeLang(lang.code); setStep("level"); } }}
+                    className={`flex items-center gap-4 px-5 py-4 rounded-xl border text-left transition-all ${
+                      !lang.available ? "opacity-40 cursor-not-allowed bg-white/5 border-white/10"
+                      : practiceLang === lang.code ? "bg-white/20 border-white/60"
+                      : "bg-white/5 border-white/10 hover:bg-white/10"
+                    }`}
+                  >
+                    <span className="text-2xl">{lang.flag}</span>
+                    <div>
+                      <div className="text-sm font-medium text-white">{lang.name}</div>
+                      {!lang.available && <div className="text-xs text-white/40">Coming soon</div>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setStep("native")} className="mt-4 text-white/40 text-xs hover:text-white/60">← Back</button>
+            </>
+          )}
 
-          <button
-            type="button"
-            onClick={handleSkip}
-            className="w-full text-center text-white/30 hover:text-white/50 text-sm transition-colors"
-          >
-            {T.skip}
-          </button>
+          {step === "level" && (
+            <>
+              <h2 className="text-white font-semibold text-lg mb-1">What's your current level?</h2>
+              <p className="text-white/50 text-sm mb-6">We'll adapt the difficulty for you</p>
+              <div className="flex flex-col gap-3">
+                {LEVELS.map((l) => (
+                  <button key={l}
+                    onClick={() => { setLevel(l); setStep("goal"); }}
+                    className={`px-5 py-4 rounded-xl border text-left transition-all ${
+                      level === l ? "bg-white/20 border-white/60" : "bg-white/5 border-white/10 hover:bg-white/10"
+                    }`}
+                  >
+                    <span className="text-sm font-medium text-white">{LEVEL_LABELS[l]}</span>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setStep("practice")} className="mt-4 text-white/40 text-xs hover:text-white/60">← Back</button>
+            </>
+          )}
+
+          {step === "goal" && (
+            <>
+              <h2 className="text-white font-semibold text-lg mb-1">What's your main goal?</h2>
+              <p className="text-white/50 text-sm mb-6">This helps us pick the best scenarios</p>
+              <div className="grid grid-cols-2 gap-3">
+                {GOALS.map((g) => (
+                  <button key={g}
+                    onClick={() => setGoal(g)}
+                    className={`px-4 py-4 rounded-xl border text-center transition-all ${
+                      goal === g ? "bg-white/20 border-white/60" : "bg-white/5 border-white/10 hover:bg-white/10"
+                    }`}
+                  >
+                    <span className="text-sm font-medium text-white">{GOAL_LABELS[g]}</span>
+                  </button>
+                ))}
+              </div>
+              {error && <p className="text-red-400 text-xs mt-3">{error}</p>}
+              <button
+                onClick={save}
+                disabled={!goal || saving}
+                className="mt-6 w-full bg-white text-gray-900 font-semibold py-3 rounded-xl disabled:opacity-50 hover:bg-white/90 transition-colors"
+              >
+                {saving ? "Saving..." : "Get started →"}
+              </button>
+              <button onClick={() => setStep("level")} className="mt-3 text-white/40 text-xs hover:text-white/60 block w-full text-center">← Back</button>
+            </>
+          )}
         </div>
       </div>
     </div>

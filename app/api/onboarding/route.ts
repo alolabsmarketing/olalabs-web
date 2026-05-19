@@ -1,43 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { getUserIdFromRequest } from "@/lib/auth-server";
 
-export async function PATCH(req: NextRequest) {
-  const userId = await getUserIdFromRequest(req);
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export async function POST(req: NextRequest) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sb-access-token")?.value;
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { level, goal, language } = await req.json();
+  const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!level || !goal) {
-    return NextResponse.json({ error: "level and goal are required" }, { status: 400 });
-  }
+  const body = await req.json();
+  const { native_language, practice_language, level, goal } = body;
 
-  const validLevels = ["beginner", "intermediate", "advanced"];
-  const validGoals = ["travel", "work", "casual", "exam"];
-  const validLanguages = ["en", "tr"];
-
-  if (!validLevels.includes(level) || !validGoals.includes(goal)) {
-    return NextResponse.json({ error: "Invalid level or goal value" }, { status: 400 });
-  }
-
-  const lang = validLanguages.includes(language) ? language : "en";
+  const update: Record<string, string> = {};
+  if (native_language)  update.native_language  = native_language;
+  if (practice_language) update.practice_language = practice_language;
+  if (level) update.level = level;
+  if (goal)  update.goal  = goal;
 
   const { error } = await supabaseAdmin
     .from("profiles")
-    .update({ level, goal, language: lang })
-    .eq("id", userId);
+    .update(update)
+    .eq("id", user.id);
 
-  if (error) {
-    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
-  }
-
-  const res = NextResponse.json({ success: true });
-  res.cookies.set("lang", lang, {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
-    sameSite: "lax",
-  });
-  return res;
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
 }
