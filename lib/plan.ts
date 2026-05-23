@@ -14,7 +14,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     sessionsPerDay: 3,
     sessionMinutes: 5,
     voiceMinutesPerDay: 10,
-    allowedCharacters: ['emma', 'leo'],
+    allowedCharacters: ['ethan', 'noah'],
     hasAnalysis: false,
     hasProgressCharts: false,
   },

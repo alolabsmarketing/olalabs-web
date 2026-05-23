@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { CHARACTERS } from "@/lib/characters";
 import { cn } from "@/lib/utils";
 import { translations, parseLang } from "@/lib/i18n";
@@ -19,17 +20,16 @@ function useLang() {
   }, []);
 }
 
-const CHAR_GRADIENTS: Record<string, string> = {
-  emma:   "radial-gradient(circle at 38% 35%, #e8d5ff 0%, #c084fc 40%, #7c3aed 75%, #4c1d95 100%)",
-  noah:   "radial-gradient(circle at 38% 35%, #bfdbfe 0%, #60a5fa 40%, #2563eb 75%, #1e3a8a 100%)",
-  sophie: "radial-gradient(circle at 38% 35%, #a7f3d0 0%, #34d399 40%, #059669 75%, #064e3b 100%)",
-};
-
 function CharacterDot({ characterId, size, className }: { characterId: string; size: number; className?: string }) {
-  return (
+  const char = CHARACTERS.find((c) => c.id === characterId) ?? CHARACTERS[0];
+  return char.photo ? (
+    <div className={cn("rounded-full flex-shrink-0 overflow-hidden", className)} style={{ width: size, height: size }}>
+      <Image src={char.photo} alt={char.name} width={size} height={size} className="object-cover object-top w-full h-full" />
+    </div>
+  ) : (
     <div
       className={cn("rounded-full flex-shrink-0", className)}
-      style={{ width: size, height: size, background: CHAR_GRADIENTS[characterId] ?? CHAR_GRADIENTS.emma }}
+      style={{ width: size, height: size, background: `radial-gradient(circle at 38% 35%, ${char.color}80, ${char.color}20)` }}
     />
   );
 }
@@ -67,7 +67,7 @@ function VoiceWave({ active }: { active: boolean }) {
 
 function PracticeContent() {
   const searchParams = useSearchParams();
-  const characterId = searchParams.get("character") ?? "emma";
+  const characterId = searchParams.get("character") ?? "ethan";
   const autoMode = searchParams.get("auto") === "true";
   const character = CHARACTERS.find((c) => c.id === characterId) ?? CHARACTERS[0];
   const lang = useLang();

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { CHARACTERS } from "@/lib/characters";
 import { cn } from "@/lib/utils";
 import { ArrowRight, Users, BookOpen, MessageCircle, PenLine, AudioLines } from "lucide-react";
@@ -55,9 +56,9 @@ export default function LandingPage() {
       .catch(() => {});
   }, []);
 
-  const emma = CHARACTERS.find((c) => c.id === "emma")!;
-  const noah = CHARACTERS.find((c) => c.id === "noah")!;
-  const sophie = CHARACTERS.find((c) => c.id === "sophie")!;
+  // Show 3 featured characters on landing
+  const showcaseChars = CHARACTERS.slice(0, 3);
+  const defaultChar = CHARACTERS[0];
 
   const heading = TAB_HEADINGS[activeTab];
 
@@ -117,44 +118,51 @@ export default function LandingPage() {
       {/* ── MAIN CONTENT ── */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 pb-8">
 
-        {/* OLA Creative: character showcase */}
+        {/* OLA Creative: character photo cards */}
         {activeTab === "creative" && (
-          <div className="flex items-end justify-center gap-16">
-            {/* Noah — smaller, left */}
-            <div className="flex flex-col items-center gap-5">
-              <Link href={`/practice?character=${noah.id}&auto=true`} className="ola-char-link">
-                <div className="ola-circle-noah" />
-              </Link>
-              <div className="text-center">
-                <p className="text-blue-300 font-bold text-xl">{noah.name}</p>
-                <p className="text-white/50 text-sm mt-0.5">{noah.role}</p>
-              </div>
-            </div>
-
-            {/* Emma — featured, center, larger */}
-            <div className="flex flex-col items-center gap-5">
-              <Link href={`/practice?character=${emma.id}&auto=true`} className="ola-char-link relative block">
-                <div className="ola-circle-emma" />
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
-                  <span className="ola-featured-badge">★ FEATURED</span>
-                </div>
-              </Link>
-              <div className="text-center">
-                <p className="text-white font-bold text-2xl">{emma.name}</p>
-                <p className="text-blue-300 text-sm mt-0.5">{emma.role}</p>
-              </div>
-            </div>
-
-            {/* Sophie — smaller, right */}
-            <div className="flex flex-col items-center gap-5">
-              <Link href={`/practice?character=${sophie.id}&auto=true`} className="ola-char-link">
-                <div className="ola-circle-sophie" />
-              </Link>
-              <div className="text-center">
-                <p className="text-emerald-300 font-bold text-xl">{sophie.name}</p>
-                <p className="text-white/50 text-sm mt-0.5">{sophie.role}</p>
-              </div>
-            </div>
+          <div className="flex items-end justify-center gap-6 mt-6">
+            {showcaseChars.map((char, i) => {
+              const isCenter = i === 1;
+              return (
+                <Link
+                  key={char.id}
+                  href={`/practice?character=${char.id}&auto=true`}
+                  className={cn(
+                    "ola-char-link group relative overflow-hidden rounded-2xl bg-black/40 border border-white/10 transition-all",
+                    isCenter ? "w-44 shadow-2xl" : "w-36 opacity-85 hover:opacity-100"
+                  )}
+                  style={{ height: isCenter ? "280px" : "230px" }}
+                >
+                  {char.photo ? (
+                    <Image
+                      src={char.photo}
+                      alt={char.name}
+                      fill
+                      className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                      sizes="200px"
+                    />
+                  ) : (
+                    <div
+                      className="w-full h-full"
+                      style={{ background: `radial-gradient(circle at 38% 35%, ${char.color}60, ${char.color}15)` }}
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-white font-semibold text-sm">{char.name}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    </div>
+                    <p className="text-white/50 text-xs">{char.role}</p>
+                  </div>
+                  {isCenter && (
+                    <div className="absolute top-3 left-3">
+                      <span className="text-xs bg-white/90 text-[#07112b] font-bold px-2 py-0.5 rounded-full">★ FREE</span>
+                    </div>
+                  )}
+                </Link>
+              );
+            })}
           </div>
         )}
 
@@ -165,7 +173,7 @@ export default function LandingPage() {
               {SCENARIOS.map((s) => (
                 <Link
                   key={s.title}
-                  href={`/practice?character=emma&scenario=${encodeURIComponent(s.title)}&auto=true`}
+                  href={`/practice?character=${defaultChar.id}&scenario=${encodeURIComponent(s.title)}&auto=true`}
                   className="ola-scenario-card p-6 flex flex-col items-start gap-3"
                 >
                   <span className="text-3xl">{s.icon}</span>
@@ -185,7 +193,7 @@ export default function LandingPage() {
           <div className="w-full max-w-2xl text-center">
             <div className="ola-code-block p-6 mb-8 text-left">
               <p className="text-xs font-mono uppercase tracking-widest text-white/35 mb-3">Quick example</p>
-              <pre className="text-sm font-mono text-green-300 leading-relaxed">{`POST /api/chat\n{ "characterId": "emma", "messages": [...] }`}</pre>
+              <pre className="text-sm font-mono text-green-300 leading-relaxed">{`POST /api/chat\n{ "characterId": "ethan", "messages": [...] }`}</pre>
             </div>
             <Link href="/register" className="ola-btn-white">
               Request API access <ArrowRight size={14} />

@@ -31,6 +31,7 @@ export interface Character {
   profession: string;
   color: string;
   featured?: boolean;
+  photo?: string;
   avatarInitials: string;
   description: string;
   personality: string;

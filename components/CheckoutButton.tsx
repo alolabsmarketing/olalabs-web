@@ -9,9 +9,11 @@ interface Props {
 
 export default function CheckoutButton({ plan, label, className = "" }: Props) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleClick() {
     setLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
@@ -22,18 +24,27 @@ export default function CheckoutButton({ plan, label, className = "" }: Props) {
         window.location.href = `/login?redirect=/pricing`;
         return;
       }
-      const { url } = await res.json();
-      if (url) window.location.href = url;
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong");
+        return;
+      }
+      if (data.url) window.location.href = data.url;
+    } catch {
+      setError("Network error, please try again");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <button onClick={handleClick} disabled={loading}
-      className={`disabled:opacity-60 transition-colors ${className}`}
-    >
-      {loading ? "Loading..." : label}
-    </button>
+    <div className="w-full">
+      <button onClick={handleClick} disabled={loading}
+        className={`disabled:opacity-60 transition-colors ${className}`}
+      >
+        {loading ? "Loading..." : label}
+      </button>
+      {error && <p className="text-red-400 text-xs mt-1 text-center">{error}</p>}
+    </div>
   );
 }

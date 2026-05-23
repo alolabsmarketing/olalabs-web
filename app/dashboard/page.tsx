@@ -4,7 +4,7 @@ import { CHARACTERS } from "@/lib/characters";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { translations, parseLang } from "@/lib/i18n";
-import { ArrowRight, MessageCircle, Clock, Star, Settings2, Check, Zap } from "lucide-react";
+import { MessageCircle, Clock, Star, Check, Zap } from "lucide-react";
 import CheckoutButton from "@/components/CheckoutButton";
 import { canUseCharacter } from "@/lib/plan";
 import CharacterCard from "@/components/CharacterCard";
@@ -69,83 +69,39 @@ export default async function DashboardPage() {
   const T = translations[lang];
   const Td = T.dashboard;
 
-  const featured = CHARACTERS.find((c) => c.featured)!;
-  const others = CHARACTERS.filter((c) => !c.featured);
-
   return (
-    <div className="ola-gradient-bg relative min-h-screen">
-      <div className="ola-wave" />
+    <div className="min-h-screen bg-[#080808]">
+      {/* Header */}
+      <header className="sticky top-0 z-20 flex items-center justify-between px-6 py-4 border-b border-white/6 bg-[#080808]/90 backdrop-blur-md">
+        <Link href="/" className="text-white font-bold text-xl tracking-tight">olalabs</Link>
+        <nav className="flex items-center gap-5 text-white/50 text-sm">
+          <Link href="/dashboard" className="text-white font-medium">{Td.nav.home}</Link>
+          <Link href="/practice" className="hover:text-white transition-colors">{Td.nav.practice}</Link>
+          {userData && (
+            <ProfileDropdown email={userData.email} plan={userData.plan} lang={lang} />
+          )}
+        </nav>
+      </header>
 
-      <div className="relative z-10 max-w-5xl mx-auto px-6 py-8">
-        <header className="flex items-center justify-between mb-10">
-          <Link href="/" className="text-white font-bold text-2xl tracking-tight">OLA</Link>
-          <nav className="flex items-center gap-4 text-white/60 text-sm">
-            <Link href="/dashboard" className="text-white font-medium">{Td.nav.home}</Link>
-            <Link href="/characters/editor" className="hover:text-white transition-colors flex items-center gap-1.5">
-              <Settings2 size={14} /> {Td.nav.characters}
-            </Link>
-            <Link href="/practice" className="hover:text-white transition-colors">{Td.nav.practice}</Link>
-            {userData && (
-              <ProfileDropdown email={userData.email} plan={userData.plan} lang={lang} />
-            )}
-          </nav>
-        </header>
-
-        <div className="mb-10">
-          <h2 className="text-white text-2xl font-bold">
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        {/* Welcome */}
+        <div className="mb-8">
+          <h1 className="text-white text-2xl font-bold tracking-tight">
             {userData ? Td.welcome(userData.email.split("@")[0]) : "Good to see you."}
-          </h2>
-          <div className="flex items-center gap-3 mt-1.5">
-            <p className="text-white/50 text-sm">{Td.subtitle}</p>
+          </h1>
+          <div className="flex items-center gap-2 mt-1.5">
+            <p className="text-white/40 text-sm">{Td.subtitle}</p>
             {userData?.level && (
-              <div className="flex items-center gap-1.5">
-                <span className="px-2 py-0.5 rounded-full bg-white/10 text-white/50 text-xs capitalize">{userData.level}</span>
-                {userData.goal && (
-                  <span className="px-2 py-0.5 rounded-full bg-white/10 text-white/50 text-xs capitalize">{userData.goal}</span>
-                )}
-              </div>
+              <span className="px-2 py-0.5 rounded-full bg-white/8 text-white/40 text-xs capitalize border border-white/8">{userData.level}</span>
+            )}
+            {userData?.goal && (
+              <span className="px-2 py-0.5 rounded-full bg-white/8 text-white/40 text-xs capitalize border border-white/8">{userData.goal}</span>
             )}
           </div>
         </div>
 
-        <div className="glass-card p-6 mb-6 flex items-center gap-6">
-          <div
-            className="w-20 h-20 rounded-full flex-shrink-0 flex items-center justify-center border-2 border-white/30"
-            style={{ background: `radial-gradient(circle, ${featured.color}30, transparent)` }}
-          >
-            <span className="text-2xl font-bold" style={{ color: featured.color }}>
-              {featured.avatarInitials}
-            </span>
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-yellow-400 text-xs font-semibold">{Td.featured}</span>
-            </div>
-            <h3 className="text-white text-lg font-bold">{featured.name}</h3>
-            <p className="text-blue-300 text-sm">{featured.role}</p>
-            <p className="text-white/50 text-sm mt-1">{featured.description}</p>
-          </div>
-          <Link
-            href={`/practice?character=${featured.id}`}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-[#07112b] font-semibold text-sm hover:bg-white/90 transition-all flex-shrink-0"
-          >
-            {Td.start} <ArrowRight size={14} />
-          </Link>
-        </div>
-
-        <h3 className="text-white/70 text-sm font-medium mb-4">{Td.allCharacters}</h3>
-        <div className="grid grid-cols-2 gap-4 mb-10">
-          {others.map((char) => (
-            <CharacterCard
-              key={char.id}
-              character={char}
-              locked={!canUseCharacter(userData?.plan, char.id)}
-              label={Td.start}
-            />
-          ))}
-        </div>
-
-        <div className="grid grid-cols-3 gap-4 mb-10">
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3 mb-10">
           {[
             { icon: MessageCircle, label: Td.sessions, value: userData ? String(userData.sessionsCount) : "0" },
             {
@@ -157,16 +113,34 @@ export default async function DashboardPage() {
             },
             { icon: Star, label: Td.avgScore, value: userData?.avgScore ? `${userData.avgScore}%` : "—" },
           ].map(({ icon: Icon, label, value }) => (
-            <div key={label} className="glass-card p-4 text-center">
-              <Icon size={20} className="text-white/40 mx-auto mb-2" />
+            <div key={label} className="rounded-2xl bg-white/4 border border-white/6 p-4 text-center">
+              <Icon size={18} className="text-white/30 mx-auto mb-2" />
               <p className="text-white font-bold text-xl">{value}</p>
-              <p className="text-white/50 text-xs">{label}</p>
+              <p className="text-white/40 text-xs mt-0.5">{label}</p>
             </div>
           ))}
         </div>
 
-        {/* Pricing */}
-        <h3 className="text-white/70 text-sm font-medium mb-4">{Td.plans}</h3>
+        {/* Characters */}
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-white font-semibold text-base">{Td.allCharacters}</h2>
+            <span className="text-white/30 text-xs">{CHARACTERS.length} characters</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            {CHARACTERS.map((char) => (
+              <CharacterCard
+                key={char.id}
+                character={char}
+                locked={!canUseCharacter(userData?.plan, char.id)}
+                label={Td.start}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Plans */}
+        <h2 className="text-white font-semibold text-base mb-5">{Td.plans}</h2>
         <div className="grid grid-cols-3 gap-4">
           {(["free", "pro", "premium"] as const).map((planId) => {
             const planNames = { free: "Free", pro: "Pro", premium: "Premium" };
@@ -178,22 +152,26 @@ export default async function DashboardPage() {
             return (
               <div
                 key={planId}
-                className={`glass-card p-5 flex flex-col gap-3 ${highlight ? "border border-white/20" : ""}`}
+                className={`rounded-2xl p-5 flex flex-col gap-3 border ${
+                  highlight
+                    ? "bg-white/6 border-white/15"
+                    : "bg-white/3 border-white/6"
+                }`}
               >
                 <div className="flex items-center justify-between">
                   <p className="text-white font-semibold text-sm">{planNames[planId]}</p>
                   {isCurrent && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">{Td.current}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-white/8 text-white/40 border border-white/8">{Td.current}</span>
                   )}
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-white text-2xl font-bold">{planPrices[planId]}</span>
-                  {planPeriods[planId] && <span className="text-white/40 text-xs">{planPeriods[planId]}</span>}
+                  {planPeriods[planId] && <span className="text-white/30 text-xs">{planPeriods[planId]}</span>}
                 </div>
                 <ul className="flex flex-col gap-1.5 flex-1">
                   {Td.planFeatures[planId].map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-white/60 text-xs">
-                      <Check size={11} className="text-white/40 flex-shrink-0" />
+                    <li key={f} className="flex items-center gap-2 text-white/50 text-xs">
+                      <Check size={10} className="text-white/30 flex-shrink-0" />
                       {f}
                     </li>
                   ))}
@@ -202,11 +180,11 @@ export default async function DashboardPage() {
                   <CheckoutButton
                     plan={planId}
                     label={`${Td.upgrade} ${planNames[planId]}`}
-                    className="mt-2 flex items-center justify-center gap-1.5 w-full py-2 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-all"
+                    className="mt-2 flex items-center justify-center gap-1.5 w-full py-2 rounded-full bg-white/8 hover:bg-white/12 text-white text-xs font-medium transition-all border border-white/10"
                   />
                 )}
                 {!isCurrent && planId === "free" && (
-                  <a href="/register" className="mt-2 flex items-center justify-center gap-1.5 w-full py-2 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-all text-center">
+                  <a href="/register" className="mt-2 flex items-center justify-center gap-1.5 w-full py-2 rounded-full bg-white/8 hover:bg-white/12 text-white text-xs font-medium transition-all border border-white/10 text-center">
                     <Zap size={11} /> {Td.upgrade}
                   </a>
                 )}

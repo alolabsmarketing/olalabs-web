@@ -119,32 +119,13 @@ body {
   transform: translateY(-8px) scale(1.025);
 }
 
-/* Character color circles */
-.ola-circle-emma {
-  width: 200px;
-  height: 200px;
-  border-radius: 9999px;
-  background: radial-gradient(circle at 38% 35%, #e8d5ff 0%, #c084fc 40%, #7c3aed 75%, #4c1d95 100%);
-  box-shadow: 0 0 70px rgba(192,132,252,0.45), 0 20px 50px rgba(0,0,40,0.35);
-  border: 3px solid rgba(255,255,255,0.40);
+/* Character photo card */
+.ola-char-card {
+  cursor: pointer;
 }
 
-.ola-circle-noah {
-  width: 140px;
-  height: 140px;
-  border-radius: 9999px;
-  background: radial-gradient(circle at 38% 35%, #bfdbfe 0%, #60a5fa 40%, #2563eb 75%, #1e3a8a 100%);
-  box-shadow: 0 0 40px rgba(96,165,250,0.30), 0 12px 40px rgba(0,0,40,0.30);
-  border: 2px solid rgba(255,255,255,0.30);
-}
-
-.ola-circle-sophie {
-  width: 140px;
-  height: 140px;
-  border-radius: 9999px;
-  background: radial-gradient(circle at 38% 35%, #a7f3d0 0%, #34d399 40%, #059669 75%, #064e3b 100%);
-  box-shadow: 0 0 40px rgba(52,211,153,0.30), 0 12px 40px rgba(0,0,40,0.30);
-  border: 2px solid rgba(255,255,255,0.30);
+.ola-char-card:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
 
 /* FEATURED badge */
