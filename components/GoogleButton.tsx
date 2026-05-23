@@ -3,12 +3,8 @@
 
 import { useState } from "react";
 
-const GOOGLE_ENABLED = Boolean(process.env.NEXT_PUBLIC_GOOGLE_ENABLED === "true");
-
 export function GoogleButton() {
   const [loading, setLoading] = useState(false);
-
-  if (!GOOGLE_ENABLED) return null;
 
   function handleGoogleLogin() {
     setLoading(true);
