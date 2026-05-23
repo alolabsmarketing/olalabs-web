@@ -60,9 +60,20 @@ export async function GET(req: NextRequest) {
       },
     });
     if (createError || !newUser.user) {
+      console.error("Google callback createUser error:", createError?.message);
       return NextResponse.redirect(`${origin}/login?error=user_creation_failed`);
     }
     userId = newUser.user.id;
+
+    // Insert profile row for new Google user
+    const { error: profileError } = await supabaseAdmin.from("profiles").insert({
+      id: userId,
+      email: googleUser.email,
+      plan: "free",
+    });
+    if (profileError) {
+      console.error("Google callback profile insert error:", profileError.message);
+    }
   }
 
   // Create a Supabase session for the user

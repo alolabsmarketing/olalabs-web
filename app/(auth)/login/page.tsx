@@ -10,12 +10,20 @@ import { GoogleButton } from "@/components/GoogleButton";
 function LoginForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/dashboard";
+  const urlError = searchParams.get("error");
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const ERROR_MESSAGES: Record<string, string> = {
+    session_failed: "Google sign-in failed. Please try again or use email/password.",
+    token_failed: "Google authentication failed. Please try again.",
+    user_creation_failed: "Could not create your account. Please try again.",
+    cancelled: "Google sign-in was cancelled.",
+    google_not_configured: "Google sign-in is not available right now.",
+  };
+  const [error, setError] = useState(urlError ? (ERROR_MESSAGES[urlError] ?? "An error occurred.") : "");
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
