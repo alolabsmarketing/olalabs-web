@@ -26,7 +26,7 @@ export default function RegisterPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Registration failed");
-      window.location.href = "/onboarding";
+      window.location.href = data.redirectTo ?? "/onboarding";
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {

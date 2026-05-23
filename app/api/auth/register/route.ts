@@ -18,20 +18,31 @@ export async function POST(req: NextRequest) {
       email,
       password,
       email_confirm: true,
-      user_metadata: { display_name: name },
+      user_metadata: { full_name: name },
     });
 
     if (createError) {
       console.error("Register createUser error:", createError.message);
+      if (createError.message.toLowerCase().includes("already registered") ||
+          createError.message.toLowerCase().includes("already exists")) {
+        return NextResponse.json({ error: "An account with this email already exists. Please sign in." }, { status: 400 });
+      }
       return NextResponse.json({ error: createError.message }, { status: 400 });
     }
 
-    // Insert profile row
-    await supabaseAdmin.from("profiles").insert({
+    // Insert profile row (only columns that exist in schema)
+    const { error: profileError } = await supabaseAdmin.from("profiles").insert({
       id: created.user.id,
-      display_name: name,
+      email,
       plan: "free",
     });
+
+    if (profileError) {
+      console.error("Register profile insert error:", profileError.message);
+      // User created in auth but profile failed — try to clean up
+      await supabaseAdmin.auth.admin.deleteUser(created.user.id);
+      return NextResponse.json({ error: "Account setup failed. Please try again." }, { status: 500 });
+    }
 
     // Sign in with regular client to get session tokens
     const client = createClient(
@@ -46,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     if (signInError || !session.session) {
       console.error("Register sign-in error:", signInError?.message);
-      // User created but couldn't auto sign-in — redirect to login
+      // User and profile created but auto sign-in failed — redirect to login
       return NextResponse.json({ success: true, redirectTo: "/login" });
     }
 
@@ -69,6 +80,6 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (e) {
     console.error("Register exception:", e);
-    return NextResponse.json({ error: "Registration failed" }, { status: 500 });
+    return NextResponse.json({ error: "Registration failed. Please try again." }, { status: 500 });
   }
 }

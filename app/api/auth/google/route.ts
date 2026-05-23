@@ -3,8 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req: NextRequest) {
   const { origin } = new URL(req.url);
 
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return NextResponse.redirect(`${origin}/login?error=google_not_configured`);
+  }
+
   const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID!,
+    client_id: process.env.GOOGLE_CLIENT_ID,
     redirect_uri: `${origin}/api/auth/google/callback`,
     response_type: "code",
     scope: "openid email profile",
