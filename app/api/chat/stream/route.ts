@@ -32,14 +32,17 @@ export async function POST(req: NextRequest) {
   const maxTokens = MAX_TOKENS[character.style.responseLength] ?? 150;
   const userId = await getUserIdFromRequest(req);
 
-  if (isInitial && userId) {
-    const { data: profile } = await supabaseAdmin.from("profiles").select("plan").eq("id", userId).single<Pick<DbProfile, "plan">>();
-    const userPlan = profile?.plan ?? "free";
-    const limits = getPlanLimits(userPlan);
+  // Check character access for ALL users (authenticated or demo/unauthenticated)
+  const effectivePlan = userId
+    ? await supabaseAdmin.from("profiles").select("plan").eq("id", userId).single<Pick<DbProfile, "plan">>().then(r => r.data?.plan ?? "free")
+    : "free";
 
-    if (!canUseCharacter(userPlan, characterId)) {
-      return new Response(JSON.stringify({ error: "CHARACTER_LOCKED" }), { status: 403 });
-    }
+  if (!canUseCharacter(effectivePlan, characterId)) {
+    return new Response(JSON.stringify({ error: "CHARACTER_LOCKED" }), { status: 403 });
+  }
+
+  if (isInitial && userId) {
+    const limits = getPlanLimits(effectivePlan);
 
     if (limits.sessionsPerDay !== Infinity) {
       const today = new Date().toISOString().split("T")[0];
@@ -56,8 +59,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!isInitial && userId && sessionId) {
-    const { data: profile } = await supabaseAdmin.from("profiles").select("plan").eq("id", userId).single<Pick<DbProfile, "plan">>();
-    const limits = getPlanLimits(profile?.plan ?? "free");
+    const limits = getPlanLimits(effectivePlan);
     if (limits.sessionMinutes !== Infinity) {
       const { data: sessionRow } = await supabaseAdmin.from("sessions").select("started_at").eq("id", sessionId).eq("user_id", userId).single<Pick<DbSession, "started_at">>();
       if (sessionRow) {
@@ -97,25 +99,32 @@ export async function POST(req: NextRequest) {
   const readable = new ReadableStream({
     async start(controller) {
       let fullText = "";
-      for await (const event of stream) {
-        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-          const chunk = event.delta.text;
-          fullText += chunk;
-          controller.enqueue(new TextEncoder().encode(chunk));
+      try {
+        for await (const event of stream) {
+          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+            const chunk = event.delta.text;
+            fullText += chunk;
+            controller.enqueue(new TextEncoder().encode(chunk));
+          }
         }
-      }
-      controller.close();
-
-      if (userId && newSessionId) {
-        if (isInitial) {
-          await supabaseAdmin.from("messages").insert({ session_id: newSessionId, role: "assistant", content: fullText });
-        } else {
-          const lastUser = (messages as Array<{ role: string; content: string }>)[messages.length - 1];
-          await supabaseAdmin.from("messages").insert([
-            { session_id: newSessionId, role: "user", content: lastUser.content },
-            { session_id: newSessionId, role: "assistant", content: fullText },
-          ]);
+        // DB writes only on successful stream completion
+        if (userId && newSessionId) {
+          if (isInitial) {
+            await supabaseAdmin.from("messages").insert({ session_id: newSessionId, role: "assistant", content: fullText });
+          } else {
+            const lastUser = (messages as Array<{ role: string; content: string }>)[messages.length - 1];
+            await supabaseAdmin.from("messages").insert([
+              { session_id: newSessionId, role: "user", content: lastUser.content },
+              { session_id: newSessionId, role: "assistant", content: fullText },
+            ]);
+          }
         }
+      } catch (err) {
+        console.error("Stream error:", err);
+        controller.error(err);
+        return;
+      } finally {
+        controller.close();
       }
     },
   });

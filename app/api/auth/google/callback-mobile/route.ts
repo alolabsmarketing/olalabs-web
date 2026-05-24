@@ -9,6 +9,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing code or redirectUri" }, { status: 400 });
     }
 
+    const ALLOWED_REDIRECT_URIS = ["olalabs://auth/google-callback"];
+    if (!ALLOWED_REDIRECT_URIS.includes(redirectUri)) {
+      return NextResponse.json({ error: "Invalid redirectUri" }, { status: 400 });
+    }
+
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
       return NextResponse.json({ error: "Google not configured" }, { status: 500 });
     }
@@ -53,11 +58,16 @@ export async function POST(req: NextRequest) {
       if (createError || !newUser.user) {
         return NextResponse.json({ error: "User creation failed" }, { status: 500 });
       }
-      await supabaseAdmin.from("profiles").insert({
+      const { error: profileInsertError } = await supabaseAdmin.from("profiles").insert({
         id: newUser.user.id,
         email: googleUser.email,
         plan: "free",
       });
+      if (profileInsertError) {
+        console.error("profile insert error:", profileInsertError.message);
+        await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
+        return NextResponse.json({ error: "Account setup failed" }, { status: 500 });
+      }
     }
 
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
