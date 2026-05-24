@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getUserIdFromRequest } from "@/lib/auth-server";
 import { getCharacter } from "@/lib/characters";
 import { getPlanLimits, canUseCharacter } from "@/lib/plan";
+import type { DbProfile, DbDailyUsage, DbSession } from "@/lib/db-types";
 
 const MAX_TOKENS: Record<string, number> = {
   very_short: 80,
@@ -22,12 +23,17 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { characterId, scenario, messages, isInitial, sessionId } = await req.json();
+    const { characterId, scenario: rawScenario, messages, isInitial, sessionId } = await req.json();
 
     const character = getCharacter(characterId);
     if (!character) {
       return NextResponse.json({ error: "Character not found" }, { status: 404 });
     }
+
+    // Sanitize user-supplied scenario to prevent prompt injection
+    const scenario = rawScenario
+      ? String(rawScenario).slice(0, 500).replace(/[\r\n]+/g, " ").trim()
+      : null;
 
     const scenarioPart = scenario
       ? `\n\nSCENARIO: ${scenario}\n\nDrop into this scenario immediately — you're already in the scene when the conversation begins. Take whatever role fits naturally (interviewer, staff, colleague, or yourself in a real-world situation). Don't announce the scenario or explain it. Just start.`
@@ -44,9 +50,9 @@ export async function POST(req: NextRequest) {
           .from("profiles")
           .select("plan")
           .eq("id", userId)
-          .single();
+          .single<Pick<DbProfile, "plan">>();
 
-        const userPlan = (profile as { plan?: string } | null)?.plan ?? "free";
+        const userPlan = profile?.plan ?? "free";
         const limits = getPlanLimits(userPlan);
 
         if (limits.sessionsPerDay !== Infinity) {
@@ -56,9 +62,9 @@ export async function POST(req: NextRequest) {
             .select("session_count")
             .eq("user_id", userId)
             .eq("date", today)
-            .single();
+            .single<Pick<DbDailyUsage, "session_count">>();
 
-          const count = (usage as { session_count?: number } | null)?.session_count ?? 0;
+          const count = usage?.session_count ?? 0;
           if (count >= limits.sessionsPerDay) {
             return NextResponse.json({ error: "SESSION_LIMIT" }, { status: 403 });
           }
@@ -114,9 +120,9 @@ export async function POST(req: NextRequest) {
         .from("profiles")
         .select("plan")
         .eq("id", userId)
-        .single();
+        .single<Pick<DbProfile, "plan">>();
 
-      const userPlan = (sessionProfile as { plan?: string } | null)?.plan ?? "free";
+      const userPlan = sessionProfile?.plan ?? "free";
       const limits = getPlanLimits(userPlan);
 
       if (limits.sessionMinutes !== Infinity) {
@@ -125,7 +131,7 @@ export async function POST(req: NextRequest) {
           .select("started_at")
           .eq("id", sessionId)
           .eq("user_id", userId)
-          .single();
+          .single<Pick<DbSession, "started_at">>();
 
         if (sessionRow) {
           const elapsed = (Date.now() - new Date(sessionRow.started_at).getTime()) / 60000;

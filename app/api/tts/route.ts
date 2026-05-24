@@ -3,6 +3,9 @@ import { getUserIdFromRequest } from "@/lib/auth-server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getPlanLimits, estimateVoiceSeconds } from "@/lib/plan";
 import { getCharacter, type CharacterTTS } from "@/lib/characters";
+import type { DbProfile, DbDailyUsage } from "@/lib/db-types";
+
+const MAX_TTS_CHARS = 1000;
 
 function cleanText(text: string): string {
   return text
@@ -64,6 +67,9 @@ export async function POST(req: NextRequest) {
   try {
     const { text, characterId } = await req.json();
     if (!text?.trim()) return NextResponse.json({ error: "No text provided" }, { status: 400 });
+    if (text.length > MAX_TTS_CHARS) {
+      return NextResponse.json({ error: "Text too long" }, { status: 400 });
+    }
 
     const userId = await getUserIdFromRequest(req);
     if (userId) {
@@ -71,8 +77,8 @@ export async function POST(req: NextRequest) {
         .from("profiles")
         .select("plan")
         .eq("id", userId)
-        .single();
-      const userPlan = (profile as { plan?: string } | null)?.plan ?? "free";
+        .single<Pick<DbProfile, "plan">>();
+      const userPlan = profile?.plan ?? "free";
       const limits = getPlanLimits(userPlan);
 
       if (limits.voiceMinutesPerDay !== Infinity) {
@@ -83,9 +89,9 @@ export async function POST(req: NextRequest) {
           .select("voice_seconds")
           .eq("user_id", userId)
           .eq("date", today)
-          .single();
+          .single<Pick<DbDailyUsage, "voice_seconds">>();
 
-        const used = (usage as { voice_seconds?: number } | null)?.voice_seconds ?? 0;
+        const used = usage?.voice_seconds ?? 0;
         if (used >= maxSeconds) {
           return NextResponse.json({ error: "VOICE_LIMIT" }, { status: 403 });
         }

@@ -3,6 +3,17 @@ import { stripe, planFromPriceId } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type Stripe from "stripe";
 
+// Stripe billing API v2 (2026-04-22.dahlia) moved current_period_end off the
+// top-level Subscription type — it still appears in the API response payload.
+interface StripeSubWithPeriod extends Stripe.Subscription {
+  current_period_end: number;
+}
+
+function getPeriodEnd(sub: Stripe.Subscription): string | null {
+  const end = (sub as StripeSubWithPeriod).current_period_end;
+  return typeof end === "number" ? new Date(end * 1000).toISOString() : null;
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig  = req.headers.get("stripe-signature");
@@ -28,7 +39,7 @@ export async function POST(req: NextRequest) {
           plan,
           stripe_subscription_id: sub.id,
           subscription_status: sub.status,
-          current_period_end: new Date((sub as unknown as { current_period_end: number }).current_period_end * 1000).toISOString(),
+          current_period_end: getPeriodEnd(sub),
         }).eq("id", userId);
         break;
       }
@@ -42,7 +53,7 @@ export async function POST(req: NextRequest) {
         await supabaseAdmin.from("profiles").update({
           plan,
           subscription_status: sub.status,
-          current_period_end: new Date((sub as unknown as { current_period_end: number }).current_period_end * 1000).toISOString(),
+          current_period_end: getPeriodEnd(sub),
         }).eq("id", (profile as { id: string }).id);
         break;
       }
@@ -57,11 +68,10 @@ export async function POST(req: NextRequest) {
         break;
       }
       case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        const subId   = (invoice as unknown as { subscription?: string }).subscription;
-        if (subId) {
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string };
+        if (invoice.subscription) {
           await supabaseAdmin.from("profiles").update({ subscription_status: "past_due" })
-            .eq("stripe_subscription_id", subId);
+            .eq("stripe_subscription_id", invoice.subscription);
         }
         break;
       }
