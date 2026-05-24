@@ -95,6 +95,7 @@ function PracticeContent() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [upgradeReason, setUpgradeReason] = useState<UpgradeReason | null>(null);
   const [sessionMinutes, setSessionMinutes] = useState<number>(5);
+  const [canAnalyze, setCanAnalyze] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -113,6 +114,7 @@ function PracticeContent() {
         if (d.loggedIn) {
           const limits = getPlanLimits(d.plan);
           setSessionMinutes(limits.sessionMinutes === Infinity ? Infinity : limits.sessionMinutes);
+          setCanAnalyze(limits.hasAnalysis);
         } else {
           const stored = parseInt(localStorage.getItem("ola_demo_count") ?? "0", 10);
           setDemoCount(stored);
@@ -329,13 +331,12 @@ function PracticeContent() {
   /* ── Scenario setup screen ── */
   if (!scenarioSet) {
     return (
-      <div className="ola-gradient-bg relative flex min-h-screen items-center justify-center p-4">
-        <div className="ola-wave" />
-        <div className="relative z-10 w-full max-w-lg">
+      <div className="bg-[#080808] flex min-h-screen items-center justify-center p-4">
+        <div className="w-full max-w-lg">
           <Link href="/" className="flex items-center gap-2 text-white/60 hover:text-white text-sm mb-6 transition-colors">
             <ArrowLeft size={14} /> {T.back}
           </Link>
-          <div className="glass-card p-8">
+          <div className="rounded-2xl bg-[#111] border border-white/8 p-8">
             <div className="flex items-center gap-4 mb-6">
               <CharacterDot characterId={character.id} size={64} />
               <div>
@@ -358,8 +359,7 @@ function PracticeContent() {
 
   /* ── Main practice screen ── */
   return (
-    <div className="ola-gradient-bg relative flex flex-col min-h-screen">
-      <div className="ola-wave" />
+    <div className="bg-[#080808] flex flex-col min-h-screen">
 
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-5 py-3 border-b border-white/10 backdrop-blur-sm">
@@ -402,7 +402,7 @@ function PracticeContent() {
             {ttsEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
           </button>
 
-          {messages.length >= 4 && (
+          {messages.length >= 4 && canAnalyze && (
             <button
               onClick={requestAnalysis}
               disabled={analysisLoading}
@@ -410,6 +410,15 @@ function PracticeContent() {
             >
               <BarChart2 size={12} />
               {analysisLoading ? T.analyzing : T.analyzeSession}
+            </button>
+          )}
+          {messages.length >= 4 && !canAnalyze && isLoggedIn && (
+            <button
+              onClick={() => setUpgradeReason("session_limit")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full glass-pill text-white/40 hover:text-white/60 text-xs font-medium transition-all"
+            >
+              <BarChart2 size={12} />
+              Analyze (Pro)
             </button>
           )}
           {messages.length > 0 && (
@@ -733,7 +742,7 @@ function PracticeContent() {
 export default function PracticePage() {
   return (
     <Suspense fallback={
-      <div className="ola-gradient-bg flex items-center justify-center min-h-screen">
+      <div className="bg-[#080808] flex items-center justify-center min-h-screen">
         <div className="text-white/50 text-sm">Loading...</div>
       </div>
     }>

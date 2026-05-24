@@ -16,7 +16,7 @@ const SCENARIOS = [
 ];
 
 export default function LandingPage() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -29,9 +29,9 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#080808] text-white">
 
       {/* ── HEADER ── */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 h-14 border-b border-white/6 bg-[#080808]/95 backdrop-blur-md">
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-5 md:px-8 h-14 border-b border-white/6 bg-[#080808]/95 backdrop-blur-md">
         <span className="text-white font-bold text-xl tracking-tight">olalabs</span>
-        <nav className="flex items-center gap-8 text-sm">
+        <nav className="hidden md:flex items-center gap-8 text-sm">
           <a href="#characters" className="text-white/45 hover:text-white transition-colors">Characters</a>
           <a href="#scenarios" className="text-white/45 hover:text-white transition-colors">Scenarios</a>
           <Link href="/pricing" className="text-white/45 hover:text-white transition-colors">Pricing</Link>
@@ -61,7 +61,7 @@ export default function LandingPage() {
       </header>
 
       {/* ── HERO ── */}
-      <section className="pt-36 pb-20 px-8 text-center">
+      <section className="pt-28 md:pt-36 pb-16 md:pb-20 px-5 md:px-8 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/6 border border-white/10 text-white/50 text-xs mb-6">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
           6 AI characters available
@@ -73,29 +73,40 @@ export default function LandingPage() {
         <p className="text-white/40 text-lg max-w-lg mx-auto mb-10 leading-relaxed">
           Real conversations. Real scenarios. Six unique characters ready to help you speak with confidence.
         </p>
-        <div className="flex items-center justify-center gap-3">
-          <Link
-            href="/register"
-            className="flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-all text-sm"
-          >
-            Start for free <ArrowRight size={14} />
-          </Link>
-          <Link
-            href="/pricing"
-            className="px-6 py-3 border border-white/12 text-white/55 hover:text-white hover:border-white/25 rounded-full text-sm font-medium transition-all"
-          >
-            See plans
-          </Link>
+        <div className="flex flex-wrap items-center justify-center gap-3 min-h-[48px]">
+          {isLoggedIn === null ? null : isLoggedIn ? (
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-all text-sm"
+            >
+              Go to Dashboard <ArrowRight size={14} />
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/register"
+                className="flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-all text-sm"
+              >
+                Start for free <ArrowRight size={14} />
+              </Link>
+              <Link
+                href="/pricing"
+                className="px-6 py-3 border border-white/12 text-white/55 hover:text-white hover:border-white/25 rounded-full text-sm font-medium transition-all"
+              >
+                See plans
+              </Link>
+            </>
+          )}
         </div>
       </section>
 
       {/* ── CHARACTERS ── */}
-      <section id="characters" className="px-8 pb-24 max-w-5xl mx-auto">
+      <section id="characters" className="px-5 md:px-8 pb-24 max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-white/35 text-xs font-semibold uppercase tracking-widest">Characters</h2>
           <span className="text-white/20 text-xs">Free: Ethan & Noah</span>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {CHARACTERS.map((char) => (
             <Link
               key={char.id}
@@ -149,12 +160,12 @@ export default function LandingPage() {
       </section>
 
       {/* ── SCENARIOS ── */}
-      <section id="scenarios" className="px-8 pb-24 max-w-5xl mx-auto">
+      <section id="scenarios" className="px-5 md:px-8 pb-24 max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-white/35 text-xs font-semibold uppercase tracking-widest">Real-life scenarios</h2>
           <span className="text-white/20 text-xs">20+ available</span>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {SCENARIOS.map((s) => (
             <Link
               key={s.title}
@@ -173,26 +184,49 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA STRIP ── */}
-      <section className="px-8 pb-24 max-w-5xl mx-auto">
+      <section className="px-5 md:px-8 pb-24 max-w-5xl mx-auto">
         <div className="rounded-2xl bg-white/4 border border-white/8 p-10 text-center">
-          <h3 className="text-white text-2xl font-bold mb-2">Ready to start speaking?</h3>
-          <p className="text-white/40 text-sm mb-6">Free plan includes Ethan & Noah — no credit card required.</p>
-          <Link
-            href="/register"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-all text-sm"
-          >
-            Create free account <ArrowRight size={14} />
-          </Link>
+          {isLoggedIn === true ? (
+            <>
+              <h3 className="text-white text-2xl font-bold mb-2">Continue your journey</h3>
+              <p className="text-white/40 text-sm mb-6">Pick up where you left off.</p>
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-all text-sm"
+              >
+                Go to Dashboard <ArrowRight size={14} />
+              </Link>
+            </>
+          ) : isLoggedIn === false ? (
+            <>
+              <h3 className="text-white text-2xl font-bold mb-2">Ready to start speaking?</h3>
+              <p className="text-white/40 text-sm mb-6">Free plan includes Ethan & Noah — no credit card required.</p>
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-all text-sm"
+              >
+                Create free account <ArrowRight size={14} />
+              </Link>
+            </>
+          ) : (
+            <div className="h-[120px]" />
+          )}
         </div>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/6 px-8 py-5 flex items-center justify-between">
+      <footer className="border-t border-white/6 px-5 md:px-8 py-5 flex items-center justify-between">
         <span className="text-white/25 text-xs font-bold">olalabs</span>
         <div className="flex items-center gap-6 text-white/25 text-xs">
           <Link href="/pricing" className="hover:text-white/50 transition-colors">Pricing</Link>
-          <Link href="/login" className="hover:text-white/50 transition-colors">Sign in</Link>
-          <Link href="/register" className="hover:text-white/50 transition-colors">Register</Link>
+          {isLoggedIn === true ? (
+            <Link href="/dashboard" className="hover:text-white/50 transition-colors">Dashboard</Link>
+          ) : (
+            <>
+              <Link href="/login" className="hover:text-white/50 transition-colors">Sign in</Link>
+              <Link href="/register" className="hover:text-white/50 transition-colors">Register</Link>
+            </>
+          )}
         </div>
       </footer>
     </div>

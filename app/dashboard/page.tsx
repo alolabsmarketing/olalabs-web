@@ -1,13 +1,30 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { CHARACTERS } from "@/lib/characters";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { translations, parseLang } from "@/lib/i18n";
-import { MessageCircle, Clock, Star, Check, Zap } from "lucide-react";
+import { MessageCircle, Clock, Star, Check, Zap, Flame } from "lucide-react";
 import CheckoutButton from "@/components/CheckoutButton";
 import { canUseCharacter } from "@/lib/plan";
 import CharacterCard from "@/components/CharacterCard";
+
+function calculateStreak(dates: Array<{ date: string }>): number {
+  if (!dates?.length) return 0;
+  const today = new Date().toISOString().split("T")[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+  if (dates[0].date !== today && dates[0].date !== yesterday) return 0;
+  let streak = 1;
+  for (let i = 1; i < dates.length; i++) {
+    const prev = new Date(dates[i - 1].date);
+    const curr = new Date(dates[i].date);
+    const diff = Math.round((prev.getTime() - curr.getTime()) / 86400000);
+    if (diff === 1) streak++;
+    else break;
+  }
+  return streak;
+}
 
 async function getUserData() {
   const cookieStore = await cookies();
@@ -26,10 +43,19 @@ async function getUserData() {
 
   const { data: recentSessions } = await supabaseAdmin
     .from("sessions")
-    .select("started_at, ended_at, analysis_results(grammar_score, vocabulary_score, fluency_score)")
+    .select("started_at, ended_at, character_id, analysis_results(grammar_score, vocabulary_score, fluency_score)")
     .eq("user_id", user.id)
     .order("started_at", { ascending: false })
-    .limit(10);
+    .limit(20);
+
+  const { data: usageDates } = await supabaseAdmin
+    .from("daily_usage")
+    .select("date")
+    .eq("user_id", user.id)
+    .order("date", { ascending: false })
+    .limit(60);
+
+  const streak = calculateStreak(usageDates ?? []);
 
   const scores = (recentSessions ?? [])
     .flatMap((s: { analysis_results: Array<{ grammar_score: number | null; vocabulary_score: number | null; fluency_score: number | null }> }) => s.analysis_results ?? [])
@@ -49,6 +75,18 @@ async function getUserData() {
       return acc + Math.max(0, mins);
     }, 0);
 
+  // Per-character breakdown
+  const charStats: Record<string, { sessions: number; minutes: number }> = {};
+  for (const s of recentSessions ?? []) {
+    const cid = (s as { character_id?: string }).character_id ?? "unknown";
+    if (!charStats[cid]) charStats[cid] = { sessions: 0, minutes: 0 };
+    charStats[cid].sessions += 1;
+    if (s.ended_at) {
+      const mins = Math.round((new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 60000);
+      charStats[cid].minutes += Math.max(0, mins);
+    }
+  }
+
   return {
     email: profile?.email ?? user.email ?? "",
     plan: profile?.plan ?? "free",
@@ -58,6 +96,8 @@ async function getUserData() {
     level: (profile as Record<string, unknown> | null)?.level as string | null ?? null,
     goal: (profile as Record<string, unknown> | null)?.goal as string | null ?? null,
     language: (profile as Record<string, unknown> | null)?.language as string | null ?? null,
+    streak,
+    charStats,
   };
 }
 
@@ -65,6 +105,13 @@ export default async function DashboardPage() {
   const cookieStore = await cookies();
   const cookieLang = cookieStore.get("lang")?.value;
   const userData = await getUserData();
+
+  if (!userData) {
+    cookieStore.delete("sb-access-token");
+    cookieStore.delete("sb-refresh-token");
+    redirect("/login");
+  }
+
   const lang = parseLang(userData?.language ?? cookieLang);
   const T = translations[lang];
   const Td = T.dashboard;
@@ -101,7 +148,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
           {[
             { icon: MessageCircle, label: Td.sessions, value: userData ? String(userData.sessionsCount) : "0" },
             {
@@ -112,6 +159,7 @@ export default async function DashboardPage() {
                 : "0h",
             },
             { icon: Star, label: Td.avgScore, value: userData?.avgScore ? `${userData.avgScore}%` : "—" },
+            { icon: Flame, label: "Day Streak", value: userData?.streak ? `${userData.streak}🔥` : "—" },
           ].map(({ icon: Icon, label, value }) => (
             <div key={label} className="rounded-2xl bg-white/4 border border-white/6 p-4 text-center">
               <Icon size={18} className="text-white/30 mx-auto mb-2" />
@@ -121,13 +169,52 @@ export default async function DashboardPage() {
           ))}
         </div>
 
+        {/* Recent Activity */}
+        {Object.keys(userData.charStats).length > 0 && (
+          <div className="mb-10">
+            <h2 className="text-white font-semibold text-base mb-4">Recent Activity</h2>
+            <div className="flex flex-col gap-2">
+              {CHARACTERS.filter((c) => userData.charStats[c.id])
+                .sort((a, b) => (userData.charStats[b.id]?.sessions ?? 0) - (userData.charStats[a.id]?.sessions ?? 0))
+                .map((char) => {
+                  const stats = userData.charStats[char.id];
+                  const maxSessions = Math.max(...Object.values(userData.charStats).map((s) => s.sessions));
+                  const pct = maxSessions > 0 ? (stats.sessions / maxSessions) * 100 : 0;
+                  return (
+                    <div key={char.id} className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/3 border border-white/6">
+                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                        {char.photo ? (
+                          <img src={char.photo} alt={char.name} className="w-full h-full object-cover object-top" />
+                        ) : (
+                          <div className="w-full h-full rounded-full" style={{ background: char.color }} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-white text-sm font-medium">{char.name}</span>
+                          <span className="text-white/30 text-xs">{stats.sessions} session{stats.sessions !== 1 ? "s" : ""}{stats.minutes > 0 ? ` · ${stats.minutes}m` : ""}</span>
+                        </div>
+                        <div className="h-1 rounded-full bg-white/8 overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${pct}%`, backgroundColor: char.color + "80" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
         {/* Characters */}
         <div className="mb-10">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-white font-semibold text-base">{Td.allCharacters}</h2>
             <span className="text-white/30 text-xs">{CHARACTERS.length} characters</span>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {CHARACTERS.map((char) => (
               <CharacterCard
                 key={char.id}
@@ -141,7 +228,7 @@ export default async function DashboardPage() {
 
         {/* Plans */}
         <h2 className="text-white font-semibold text-base mb-5">{Td.plans}</h2>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {(["free", "pro", "premium"] as const).map((planId) => {
             const planNames = { free: "Free", pro: "Pro", premium: "Premium" };
             const planPrices = { free: "$0", pro: "$9", premium: "$19" };

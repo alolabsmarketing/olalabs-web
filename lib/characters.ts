@@ -22,6 +22,9 @@ export interface CharacterTTS {
   lang: string;
   elevenLabsVoiceId?: string;
   stability?: number;
+  azureVoiceName?: string;
+  azureStyle?: string;
+  azureStyleDegree?: number;
 }
 
 export interface Character {

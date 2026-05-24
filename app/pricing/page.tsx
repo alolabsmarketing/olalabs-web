@@ -6,13 +6,15 @@ const PLANS = [
   {
     name: "Free", price: "$0", period: "",
     description: "Start for free, no card needed",
-    borderClass: "border-white/10",
+    bgClass: "bg-white/[0.03]",
+    borderClass: "border-white/[0.08]",
+    checkClass: "text-white/30",
     features: [
       "3 sessions per day",
       "5 minutes per session",
-      "10 minutes voice practice/day",
-      "2 AI characters (Emma & Leo)",
-      "3 practice scenarios",
+      "10 minutes voice / day",
+      "2 characters — Ethan & Noah",
+      "All practice scenarios",
     ],
     ctaType: "link" as const,
     ctaHref: "/register",
@@ -22,15 +24,17 @@ const PLANS = [
   {
     name: "Pro", price: "$9", period: "/month",
     description: "For daily learners — 1-2 hours a day",
-    borderClass: "border-indigo-500/50",
+    bgClass: "bg-white/[0.06]",
+    borderClass: "border-white/[0.15]",
+    checkClass: "text-blue-400",
     badge: "Most Popular",
     features: [
       "10 sessions per day",
       "20 minutes per session",
       "Unlimited voice practice",
-      "All 6+ AI characters",
-      "All practice scenarios",
+      "All 6 AI characters",
       "Session analysis & feedback",
+      "All practice scenarios",
     ],
     ctaType: "checkout" as const,
     ctaPlan: "pro" as const,
@@ -40,14 +44,16 @@ const PLANS = [
   {
     name: "Premium", price: "$19", period: "/month",
     description: "For serious learners — no limits",
-    borderClass: "border-amber-500/30",
+    bgClass: "bg-white/[0.04]",
+    borderClass: "border-amber-500/20",
+    checkClass: "text-amber-400",
     features: [
-      "Unlimited sessions & length",
+      "Unlimited sessions & time",
       "Unlimited voice practice",
-      "All characters & scenarios",
-      "Detailed analysis & feedback",
+      "All 6 AI characters",
+      "Session analysis & feedback",
       "Progress charts & streaks",
-      "Custom scenarios (coming soon)",
+      "Priority support",
     ],
     ctaType: "checkout" as const,
     ctaPlan: "premium" as const,
@@ -58,17 +64,19 @@ const PLANS = [
 
 export default function PricingPage() {
   return (
-    <div className="ola-gradient-bg relative min-h-screen">
-      <div className="ola-wave" />
-      <div className="relative z-10 max-w-5xl mx-auto px-6 py-16">
+    <div className="bg-[#080808] min-h-screen">
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 h-14 border-b border-white/[0.06] bg-[#080808]/95 backdrop-blur-md">
+        <Link href="/" className="text-white font-bold text-xl tracking-tight">olalabs</Link>
+        <Link href="/dashboard" className="text-white/50 hover:text-white text-sm transition-colors">Dashboard</Link>
+      </header>
+      <div className="max-w-5xl mx-auto px-6 py-16 pt-24">
         <div className="text-center mb-12">
-          <Link href="/" className="text-white font-bold text-2xl tracking-tight block mb-8">OLA</Link>
           <h1 className="text-4xl font-bold text-white mb-3">Simple pricing</h1>
-          <p className="text-white/50">Start free. Upgrade when you're ready.</p>
+          <p className="text-white/50">Start free. Upgrade when you&apos;re ready.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {PLANS.map((plan) => (
-            <div key={plan.name} className={`relative bg-white/5 border ${plan.borderClass} rounded-2xl p-8`}>
+            <div key={plan.name} className={`relative ${plan.bgClass} border ${plan.borderClass} rounded-2xl p-8`}>
               {"badge" in plan && plan.badge && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                   {plan.badge}
@@ -84,7 +92,7 @@ export default function PricingPage() {
               <ul className="space-y-3 mb-8">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-white/70">
-                    <Check size={14} className="text-green-400 flex-shrink-0" />{f}
+                    <Check size={14} className={`${plan.checkClass} flex-shrink-0`} />{f}
                   </li>
                 ))}
               </ul>

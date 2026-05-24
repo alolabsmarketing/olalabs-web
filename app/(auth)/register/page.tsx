@@ -35,15 +35,14 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="ola-gradient-bg relative flex min-h-screen items-center justify-center p-4">
-      <div className="ola-wave" />
-      <div className="relative z-10 w-full max-w-md">
+    <div className="bg-[#080808] flex min-h-screen items-center justify-center p-4">
+      <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="text-white font-bold text-3xl tracking-tight">OLA</Link>
           <p className="text-white/60 text-sm mt-2">Start your language journey</p>
         </div>
 
-        <div className="glass-card p-8">
+        <div className="rounded-2xl bg-[#111] border border-white/8 p-8">
           <h2 className="text-white text-xl font-semibold mb-6">Create your account</h2>
 
           {error && (
@@ -131,3 +130,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+

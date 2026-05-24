@@ -1,31 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFileSync } from "fs";
-import { join } from "path";
 import { getUserIdFromRequest } from "@/lib/auth-server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getPlanLimits, estimateVoiceSeconds } from "@/lib/plan";
-
-interface CharacterTTS {
-  azureVoiceName?: string;
-  azureStyle?: string;
-  azureStyleDegree?: number;
-  rate?: number;
-  pitch?: number;
-}
-
-interface CharacterConfig {
-  id: string;
-  tts: CharacterTTS;
-}
-
-function loadCharacter(id: string): CharacterConfig | undefined {
-  try {
-    const data = JSON.parse(readFileSync(join(process.cwd(), "data", "characters.json"), "utf-8"));
-    return data.find((c: CharacterConfig) => c.id === id);
-  } catch {
-    return undefined;
-  }
-}
+import { getCharacter, type CharacterTTS } from "@/lib/characters";
 
 function cleanText(text: string): string {
   return text
@@ -124,8 +101,8 @@ export async function POST(req: NextRequest) {
     const cleaned = cleanText(text);
     if (!cleaned) return NextResponse.json({ error: "No speakable text" }, { status: 400 });
 
-    const character = loadCharacter(characterId);
-    const tts = character?.tts ?? {};
+    const character = getCharacter(characterId);
+    const tts: Partial<CharacterTTS> = character?.tts ?? {};
     const voiceName = tts.azureVoiceName ?? "en-US-JennyNeural";
 
     const ssml = buildSsml(
@@ -144,7 +121,7 @@ export async function POST(req: NextRequest) {
         headers: {
           "Ocp-Apim-Subscription-Key": azureKey,
           "Content-Type": "application/ssml+xml",
-          "X-Microsoft-OutputFormat": "audio-24khz-160kbitrate-mono-mp3",
+          "X-Microsoft-OutputFormat": "audio-48khz-192kbitrate-mono-mp3",
         },
         body: ssml,
       }

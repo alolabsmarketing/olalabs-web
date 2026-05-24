@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFileSync } from "fs";
-import { join } from "path";
 import { anthropic } from "@/lib/claude";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getUserIdFromRequest } from "@/lib/auth-server";
-import type { Character } from "@/lib/characters";
+import { getCharacter } from "@/lib/characters";
 import { getPlanLimits, canUseCharacter } from "@/lib/plan";
-
-function loadCharacter(id: string): Character | undefined {
-  try {
-    const data = JSON.parse(readFileSync(join(process.cwd(), "data", "characters.json"), "utf-8"));
-    return data.find((c: Character) => c.id === id);
-  } catch {
-    return undefined;
-  }
-}
 
 const MAX_TOKENS: Record<string, number> = {
   very_short: 80,
@@ -35,13 +24,13 @@ export async function POST(req: NextRequest) {
   try {
     const { characterId, scenario, messages, isInitial, sessionId } = await req.json();
 
-    const character = loadCharacter(characterId);
+    const character = getCharacter(characterId);
     if (!character) {
       return NextResponse.json({ error: "Character not found" }, { status: 404 });
     }
 
     const scenarioPart = scenario
-      ? `\n\nSCENARIO SET BY USER: "${scenario}"\nAdapt naturally to this scenario while keeping your character identity.`
+      ? `\n\nSCENARIO: ${scenario}\n\nDrop into this scenario immediately — you're already in the scene when the conversation begins. Take whatever role fits naturally (interviewer, staff, colleague, or yourself in a real-world situation). Don't announce the scenario or explain it. Just start.`
       : "";
 
     const systemPrompt = character.systemPrompt + scenarioPart;
@@ -86,8 +75,8 @@ export async function POST(req: NextRequest) {
       }
 
       const initMessage = scenario
-        ? `The user wants to practice English. Start the session in character. The scenario is: "${scenario}". Open the conversation naturally as your character would in this situation.`
-        : "The user wants to practice English. Start the session with a natural opening that reflects your character. Don't say 'How can I help you?' — open in a way that's true to who you are.";
+        ? `Start the conversation. You're in the scene. Go.`
+        : "Start the session naturally. Don't say 'How can I help you?' — open as your character would.";
 
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
@@ -117,6 +106,34 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json({ content, sessionId: newSessionId });
+    }
+
+    // Session duration limit check (non-initial messages)
+    if (userId && sessionId) {
+      const { data: sessionProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("plan")
+        .eq("id", userId)
+        .single();
+
+      const userPlan = (sessionProfile as { plan?: string } | null)?.plan ?? "free";
+      const limits = getPlanLimits(userPlan);
+
+      if (limits.sessionMinutes !== Infinity) {
+        const { data: sessionRow } = await supabaseAdmin
+          .from("sessions")
+          .select("started_at")
+          .eq("id", sessionId)
+          .eq("user_id", userId)
+          .single();
+
+        if (sessionRow) {
+          const elapsed = (Date.now() - new Date(sessionRow.started_at).getTime()) / 60000;
+          if (elapsed >= limits.sessionMinutes) {
+            return NextResponse.json({ error: "SESSION_LIMIT" }, { status: 403 });
+          }
+        }
+      }
     }
 
     let apiMessages = messages.map((m: { role: string; content: string }) => ({

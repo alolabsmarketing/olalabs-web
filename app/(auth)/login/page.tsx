@@ -46,7 +46,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="glass-card p-8">
+    <div className="rounded-2xl bg-[#111] border border-white/8 p-8">
       <h2 className="text-white text-xl font-semibold mb-6">Sign in to your account</h2>
 
       {error && (
@@ -118,14 +118,13 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="ola-gradient-bg relative flex min-h-screen items-center justify-center p-4">
-      <div className="ola-wave" />
-      <div className="relative z-10 w-full max-w-md">
+    <div className="bg-[#080808] flex min-h-screen items-center justify-center p-4">
+      <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="text-white font-bold text-3xl tracking-tight">OLA</Link>
           <p className="text-white/60 text-sm mt-2">Welcome back</p>
         </div>
-        <Suspense fallback={<div className="glass-card p-8 text-white/50 text-center text-sm">Loading...</div>}>
+        <Suspense fallback={<div className="rounded-2xl bg-[#111] border border-white/8 p-8 text-white/50 text-center text-sm">Loading...</div>}>
           <LoginForm />
         </Suspense>
       </div>
