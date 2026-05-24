@@ -61,7 +61,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, redirectTo: "/login" });
     }
 
-    const res = NextResponse.json({ success: true });
+    const res = NextResponse.json({
+      success: true,
+      accessToken: session.session.access_token,
+      refreshToken: session.session.refresh_token,
+    });
     res.cookies.set("sb-access-token", session.session.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

@@ -33,7 +33,11 @@ export async function POST(req: NextRequest) {
 
     const lang = profile?.language === "tr" ? "tr" : "en";
 
-    const res = NextResponse.json({ success: true });
+    const res = NextResponse.json({
+      success: true,
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+    });
     res.cookies.set("sb-access-token", data.session.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
