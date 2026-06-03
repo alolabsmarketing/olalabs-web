@@ -31,7 +31,7 @@ const en = {
     current: "Current",
     upgrade: "Upgrade",
     planFeatures: {
-      free: ["5 sessions / month", "2 characters", "Basic feedback"] as string[],
+      free: ["3 sessions / day", "2 characters", "Basic feedback"] as string[],
       pro: ["Unlimited sessions", "All characters", "Detailed analysis", "Voice practice"] as string[],
       premium: ["Unlimited everything", "Progress charts & streaks", "All characters & scenarios", "Priority support"] as string[],
     },
@@ -103,7 +103,7 @@ const tr: typeof en = {
     current: "Mevcut",
     upgrade: "Yükselt",
     planFeatures: {
-      free: ["Ayda 5 oturum", "2 karakter", "Temel geri bildirim"],
+      free: ["Günde 3 oturum", "2 karakter", "Temel geri bildirim"],
       pro: ["Sınırsız oturum", "Tüm karakterler", "Detaylı analiz", "Sesli pratik"],
       premium: ["Sınırsız her şey", "İlerleme grafikleri", "Tüm karakter ve senaryolar", "Öncelikli destek"],
     },

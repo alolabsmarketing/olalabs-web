@@ -122,6 +122,14 @@ export async function GET(req: NextRequest) {
       .eq("id", userId)
       .single();
 
+    // Mobile flow: redirect back to app via deep link
+    const state = searchParams.get("state");
+    if (state === "mobile") {
+      const needsOnboarding = !profile?.level ? "1" : "0";
+      const deepLink = `olalabs://auth/callback?access_token=${encodeURIComponent(access_token)}&refresh_token=${encodeURIComponent(refresh_token)}&needs_onboarding=${needsOnboarding}`;
+      return NextResponse.redirect(deepLink);
+    }
+
     const lang = profile?.language === "tr" ? "tr" : "en";
     const redirectTo = !profile?.level ? "/onboarding" : "/dashboard";
 

@@ -3,8 +3,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getUserIdFromRequest } from "@/lib/auth-server";
 import { getCharacter } from "@/lib/characters";
-import { getPlanLimits, canUseCharacter } from "@/lib/plan";
-import type { DbProfile, DbDailyUsage, DbSession } from "@/lib/db-types";
+import { canUseCharacter } from "@/lib/plan";
+import type { DbProfile } from "@/lib/db-types";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
@@ -30,7 +30,13 @@ export async function POST(req: NextRequest) {
 
   const systemPrompt = character.systemPrompt + scenarioPart;
   const maxTokens = MAX_TOKENS[character.style.responseLength] ?? 150;
+  // If an auth token was sent but is invalid/expired, force re-login
+  const authHeader = req.headers.get("authorization");
+  const hasBearerToken = authHeader?.startsWith("Bearer ");
   const userId = await getUserIdFromRequest(req);
+  if (hasBearerToken && !userId) {
+    return new Response(JSON.stringify({ error: "UNAUTHORIZED" }), { status: 401 });
+  }
 
   // Check character access for ALL users (authenticated or demo/unauthenticated)
   const effectivePlan = userId
@@ -41,35 +47,6 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: "CHARACTER_LOCKED" }), { status: 403 });
   }
 
-  if (isInitial && userId) {
-    const limits = getPlanLimits(effectivePlan);
-
-    if (limits.sessionsPerDay !== Infinity) {
-      const today = new Date().toISOString().split("T")[0];
-      const { data: usage } = await supabaseAdmin.from("daily_usage").select("session_count").eq("user_id", userId).eq("date", today).single<Pick<DbDailyUsage, "session_count">>();
-      const count = usage?.session_count ?? 0;
-      if (count >= limits.sessionsPerDay) {
-        return new Response(JSON.stringify({ error: "SESSION_LIMIT" }), { status: 403 });
-      }
-      await supabaseAdmin.from("daily_usage").upsert(
-        { user_id: userId, date: today, session_count: count + 1 },
-        { onConflict: "user_id,date" }
-      );
-    }
-  }
-
-  if (!isInitial && userId && sessionId) {
-    const limits = getPlanLimits(effectivePlan);
-    if (limits.sessionMinutes !== Infinity) {
-      const { data: sessionRow } = await supabaseAdmin.from("sessions").select("started_at").eq("id", sessionId).eq("user_id", userId).single<Pick<DbSession, "started_at">>();
-      if (sessionRow) {
-        const elapsed = (Date.now() - new Date(sessionRow.started_at).getTime()) / 60000;
-        if (elapsed >= limits.sessionMinutes) {
-          return new Response(JSON.stringify({ error: "SESSION_LIMIT" }), { status: 403 });
-        }
-      }
-    }
-  }
 
   let apiMessages = isInitial
     ? [{ role: "user" as const, content: scenario ? "Start. You're in the scene. Go." : "Start the session naturally." }]

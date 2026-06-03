@@ -30,17 +30,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: createError.message }, { status: 400 });
     }
 
-    // Insert profile row (only columns that exist in schema)
-    const { error: profileError } = await supabaseAdmin.from("profiles").insert({
-      id: created.user.id,
-      email,
-      plan: "free",
-    });
+    // Profile is created by the on_auth_user_created trigger.
+    // Upsert here as a safety net in case the trigger fires before we do.
+    const { error: profileError } = await supabaseAdmin.from("profiles").upsert(
+      { id: created.user.id, email, plan: "free", display_name: name },
+      { onConflict: "id" }
+    );
 
     if (profileError) {
-      console.error("Register profile insert error:", profileError.message);
-      // User created in auth but profile failed — try to clean up
-      await supabaseAdmin.auth.admin.deleteUser(created.user.id);
+      console.error("Register profile upsert error:", profileError.message);
       return NextResponse.json({ error: "Account setup failed. Please try again." }, { status: 500 });
     }
 

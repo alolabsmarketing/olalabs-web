@@ -37,7 +37,7 @@ async function getUserData() {
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("email, plan, sessions_count, level, goal, language")
+    .select("email, plan, sessions_count, level, goal, language, display_name")
     .eq("id", user.id)
     .single();
 
@@ -87,15 +87,17 @@ async function getUserData() {
     }
   }
 
+  const profileRec = profile as Record<string, unknown> | null;
   return {
     email: profile?.email ?? user.email ?? "",
+    displayName: (profileRec?.display_name as string | null) || (user.user_metadata?.full_name as string | null) || null,
     plan: profile?.plan ?? "free",
     sessionsCount: profile?.sessions_count ?? 0,
     totalMinutes,
     avgScore,
-    level: (profile as Record<string, unknown> | null)?.level as string | null ?? null,
-    goal: (profile as Record<string, unknown> | null)?.goal as string | null ?? null,
-    language: (profile as Record<string, unknown> | null)?.language as string | null ?? null,
+    level: profileRec?.level as string | null ?? null,
+    goal: profileRec?.goal as string | null ?? null,
+    language: profileRec?.language as string | null ?? null,
     streak,
     charStats,
   };
@@ -123,9 +125,9 @@ export default async function DashboardPage() {
         <Link href="/" className="text-white font-bold text-xl tracking-tight">olalabs</Link>
         <nav className="flex items-center gap-5 text-white/50 text-sm">
           <Link href="/dashboard" className="text-white font-medium">{Td.nav.home}</Link>
-          <Link href="/practice" className="hover:text-white transition-colors">{Td.nav.practice}</Link>
+          <Link href="/dashboard#characters" className="hover:text-white transition-colors">{Td.nav.practice}</Link>
           {userData && (
-            <ProfileDropdown email={userData.email} plan={userData.plan} lang={lang} />
+            <ProfileDropdown email={userData.email} displayName={userData.displayName ?? undefined} plan={userData.plan} lang={lang} />
           )}
         </nav>
       </header>
@@ -134,7 +136,7 @@ export default async function DashboardPage() {
         {/* Welcome */}
         <div className="mb-8">
           <h1 className="text-white text-2xl font-bold tracking-tight">
-            {userData ? Td.welcome(userData.email.split("@")[0]) : "Good to see you."}
+            {userData ? Td.welcome(userData.displayName ?? userData.email.split("@")[0]) : "Good to see you."}
           </h1>
           <div className="flex items-center gap-2 mt-1.5">
             <p className="text-white/40 text-sm">{Td.subtitle}</p>
@@ -209,7 +211,7 @@ export default async function DashboardPage() {
         )}
 
         {/* Characters */}
-        <div className="mb-10">
+        <div className="mb-10" id="characters">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-white font-semibold text-base">{Td.allCharacters}</h2>
             <span className="text-white/30 text-xs">{CHARACTERS.length} characters</span>
@@ -231,7 +233,8 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {(["free", "pro", "premium"] as const).map((planId) => {
             const planNames = { free: "Free", pro: "Pro", premium: "Premium" };
-            const planPrices = { free: "$0", pro: "$9", premium: "$19" };
+            const planPrices = { free: "$0", pro: "$4.50", premium: "$9.50" };
+            const planOriginals = { free: null, pro: "$9", premium: "$19" };
             const planPeriods = { free: "", pro: "/ mo", premium: "/ mo" };
             const isCurrent = !userData ? planId === "free" : userData.plan === planId;
             const highlight = planId === "pro";
@@ -251,8 +254,11 @@ export default async function DashboardPage() {
                     <span className="text-xs px-2 py-0.5 rounded-full bg-white/8 text-white/40 border border-white/8">{Td.current}</span>
                   )}
                 </div>
-                <div className="flex items-baseline gap-1">
+                <div className="flex items-baseline gap-1.5 flex-wrap">
                   <span className="text-white text-2xl font-bold">{planPrices[planId]}</span>
+                  {planOriginals[planId] && (
+                    <span className="text-white/30 text-sm line-through">{planOriginals[planId]}</span>
+                  )}
                   {planPeriods[planId] && <span className="text-white/30 text-xs">{planPeriods[planId]}</span>}
                 </div>
                 <ul className="flex flex-col gap-1.5 flex-1">

@@ -1,225 +1,547 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { CHARACTERS } from "@/lib/characters";
-import { ArrowRight, Phone, MessageCircle, AudioLines } from "lucide-react";
+import {
+  ArrowRight,
+  Play,
+  Volume2,
+  Maximize2,
+  Captions,
+  MessageCircle,
+  Headphones,
+  BookOpen,
+  Users,
+  X,
+  Menu,
+  Globe,
+} from "lucide-react";
 
-const SCENARIOS = [
-  { title: "Visa Interview", icon: "🛂", desc: "US, UK or Schengen visa appointments" },
-  { title: "Job Interview", icon: "💼", desc: "Ace your next career opportunity" },
-  { title: "Restaurant", icon: "🍽️", desc: "Order food, make reservations" },
-  { title: "Doctor Visit", icon: "🏥", desc: "Explain symptoms, understand advice" },
-  { title: "Hotel Check-in", icon: "🏨", desc: "Navigate travel accommodation" },
-  { title: "University Admission", icon: "🎓", desc: "Academic interviews and discussions" },
-];
+// ── Promo countdown — resets daily at midnight ───────────────────────────────
+function getDailyEnd(): number {
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  return end.getTime();
+}
 
+function useCountdown() {
+  const [diff, setDiff] = useState<number | null>(null); // null = not yet mounted (avoids SSR/CSR mismatch)
+  useEffect(() => {
+    const tick = () => {
+      const remaining = Math.max(0, getDailyEnd() - Date.now());
+      setDiff(remaining);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  if (diff === null) return { h: 0, m: 0, s: 0, mounted: false };
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  return { h, m, s, mounted: true };
+}
+
+function TimeUnit({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex flex-col items-center min-w-[40px]">
+      <span className="text-[#080808] font-bold text-lg leading-none tabular-nums">
+        {String(value).padStart(2, "0")}
+      </span>
+      <span className="text-[#080808]/60 text-[9px] uppercase tracking-wider mt-0.5">{label}</span>
+    </div>
+  );
+}
+
+// ── Wave animation (voice indicator) ────────────────────────────────────────
+function VoiceWave() {
+  return (
+    <div className="flex items-end gap-[3px] h-5">
+      {[4, 8, 12, 8, 14, 6, 10, 14, 8, 6].map((h, i) => (
+        <div
+          key={i}
+          className="w-[3px] rounded-full bg-[#f5c518]"
+          style={{
+            height: `${h}px`,
+            animation: `wave ${0.6 + i * 0.08}s ease-in-out infinite alternate`,
+            animationDelay: `${i * 60}ms`,
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes wave {
+          from { transform: scaleY(0.4); }
+          to   { transform: scaleY(1.2); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ── Typing dots ──────────────────────────────────────────────────────────────
+function TypingDots() {
+  return (
+    <div className="flex items-center gap-1 px-3 py-2 rounded-full bg-white/10 w-fit">
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="w-1.5 h-1.5 rounded-full bg-white/50"
+          style={{ animation: `dot-pulse 1.2s ease-in-out infinite`, animationDelay: `${i * 0.2}s` }}
+        />
+      ))}
+      <style>{`
+        @keyframes dot-pulse {
+          0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+          40% { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────────────────────
 export default function LandingPage() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [showPromo, setShowPromo] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const countdown = useCountdown();
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem("ola_promo_dismissed");
+    if (dismissed) setShowPromo(false);
+  }, []);
 
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => r.json())
-      .then((d) => setIsLoggedIn(d.loggedIn))
-      .catch(() => {});
+      .then((d) => setIsLoggedIn(!!d.loggedIn))
+      .catch(() => setIsLoggedIn(false));
   }, []);
 
-  return (
-    <div className="min-h-screen bg-[#080808] text-white">
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
-      {/* ── HEADER ── */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-5 md:px-8 h-14 border-b border-white/6 bg-[#080808]/95 backdrop-blur-md">
-        <span className="text-white font-bold text-xl tracking-tight">olalabs</span>
-        <nav className="hidden md:flex items-center gap-8 text-sm">
-          <a href="#characters" className="text-white/45 hover:text-white transition-colors">Characters</a>
-          <a href="#scenarios" className="text-white/45 hover:text-white transition-colors">Scenarios</a>
+  function dismissPromo() {
+    localStorage.setItem("ola_promo_dismissed", "1");
+    setShowPromo(false);
+  }
+
+  const avatarChars = CHARACTERS.slice(0, 4);
+  const amelie = CHARACTERS.find((c) => c.id === "amelie");
+
+  return (
+    <div className="min-h-screen bg-[#080808] text-white overflow-x-hidden">
+
+      {/* ── PROMO BANNER ──────────────────────────────────────────────────── */}
+      {showPromo && countdown.mounted && (
+        <div className="relative bg-[#f5c518] text-[#080808] py-2.5 px-4">
+          <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Limited time offer</span>
+            <p className="font-bold text-sm sm:text-base">
+              Get <span className="text-lg font-extrabold">50% off</span> on all plans.
+            </p>
+            <div className="flex items-center gap-3">
+              <TimeUnit value={countdown.h} label="hrs" />
+              <span className="text-[#080808]/40 font-bold text-lg -mt-2">:</span>
+              <TimeUnit value={countdown.m} label="min" />
+              <span className="text-[#080808]/40 font-bold text-lg -mt-2">:</span>
+              <TimeUnit value={countdown.s} label="sec" />
+            </div>
+            <Link
+              href="/pricing"
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#080808] text-[#f5c518] text-sm font-bold rounded-full hover:bg-[#080808]/80 transition-all"
+            >
+              Claim Now <ArrowRight size={12} />
+            </Link>
+          </div>
+          <button
+            onClick={dismissPromo}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#080808]/50 hover:text-[#080808] transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* ── HEADER ────────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 flex items-center justify-between px-5 md:px-8 h-14 border-b border-white/6 bg-[#080808]/95 backdrop-blur-md">
+        <Link href="/" className="text-white font-bold text-xl tracking-tight select-none">
+          olalabs
+        </Link>
+
+        {/* Desktop nav */}
+        <nav className="hidden md:flex items-center gap-6 text-sm">
+          <button
+            onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}
+            className="text-white/45 hover:text-white transition-colors"
+          >
+            How it works
+          </button>
+          <button
+            onClick={() => document.getElementById("characters")?.scrollIntoView({ behavior: "smooth" })}
+            className="text-white/45 hover:text-white transition-colors"
+          >
+            Characters
+          </button>
           <Link href="/pricing" className="text-white/45 hover:text-white transition-colors">Pricing</Link>
         </nav>
+
         <div className="flex items-center gap-3">
-          {isLoggedIn ? (
+          {/* Language indicator */}
+          <div className="hidden sm:flex items-center gap-1.5 text-white/30 text-xs">
+            <Globe size={12} />
+            <span>EN</span>
+          </div>
+
+          {isLoggedIn === null ? (
+            <div className="w-24 h-8 rounded-full bg-white/6 animate-pulse" />
+          ) : isLoggedIn ? (
             <Link
               href="/dashboard"
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-white text-black text-sm font-semibold rounded-full hover:bg-white/90 transition-all"
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#f5c518] text-[#080808] text-sm font-bold rounded-full hover:bg-[#f5c518]/90 transition-all"
             >
-              Dashboard <ArrowRight size={13} />
+              Dashboard <ArrowRight size={12} />
             </Link>
           ) : (
             <>
-              <Link href="/login" className="text-white/50 hover:text-white text-sm transition-colors">
+              <Link href="/login" className="hidden sm:block text-white/50 hover:text-white text-sm transition-colors">
                 Sign in
               </Link>
               <Link
                 href="/register"
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-white text-black text-sm font-semibold rounded-full hover:bg-white/90 transition-all"
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#f5c518] text-[#080808] text-sm font-bold rounded-full hover:bg-[#f5c518]/90 transition-all"
               >
-                Get started <ArrowRight size={13} />
+                Get started <ArrowRight size={12} />
               </Link>
             </>
           )}
+
+          {/* Mobile hamburger */}
+          <div className="relative md:hidden" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="p-1.5 text-white/50 hover:text-white transition-colors"
+            >
+              <Menu size={18} />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-10 w-44 rounded-xl bg-[#111] border border-white/10 py-1 shadow-xl">
+                {[
+                  { label: "How it works", href: "#how-it-works" },
+                  { label: "Characters", href: "#characters" },
+                  { label: "Pricing", href: "/pricing" },
+                  { label: isLoggedIn ? "Dashboard" : "Sign in", href: isLoggedIn ? "/dashboard" : "/login" },
+                ].map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* ── HERO ── */}
-      <section className="pt-28 md:pt-36 pb-16 md:pb-20 px-5 md:px-8 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/6 border border-white/10 text-white/50 text-xs mb-6">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          6 AI characters available
-        </div>
-        <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-[1.08] mb-5">
-          Practice English<br />
-          <span className="text-white/40">with AI characters</span>
-        </h1>
-        <p className="text-white/40 text-lg max-w-lg mx-auto mb-10 leading-relaxed">
-          Real conversations. Real scenarios. Six unique characters ready to help you speak with confidence.
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-3 min-h-[48px]">
-          {isLoggedIn === null ? null : isLoggedIn ? (
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-all text-sm"
-            >
-              Go to Dashboard <ArrowRight size={14} />
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/register"
-                className="flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-all text-sm"
-              >
-                Start for free <ArrowRight size={14} />
-              </Link>
-              <Link
-                href="/pricing"
-                className="px-6 py-3 border border-white/12 text-white/55 hover:text-white hover:border-white/25 rounded-full text-sm font-medium transition-all"
-              >
-                See plans
-              </Link>
-            </>
+      {/* ── HERO — VIDEO PLAYER SECTION ───────────────────────────────────── */}
+      <section id="how-it-works" className="px-4 md:px-8 pt-10 pb-6 max-w-5xl mx-auto">
+        <div className="relative rounded-2xl overflow-hidden bg-[#0d0d0d] border border-white/8" style={{ aspectRatio: "16/9" }}>
+          {/* Character image — placeholder until video is ready */}
+          {/* TODO: Replace <Image> with <video> tag when video asset is ready */}
+          {amelie?.photo && (
+            <Image
+              src={amelie.photo}
+              alt="Amelie — OlaLabs character"
+              fill
+              priority
+              className="object-cover object-top"
+              sizes="(max-width: 1024px) 100vw, 1024px"
+            />
           )}
+
+          {/* Dark cinematic overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#080808]/50 via-transparent to-[#080808]/20" />
+
+          {/* Top-left label */}
+          <div className="absolute top-5 left-5 flex items-center gap-2">
+            <span className="text-white/40 text-[11px] font-semibold uppercase tracking-widest">01</span>
+            <div className="w-px h-3 bg-white/20" />
+            <span className="text-white/40 text-[11px] font-semibold uppercase tracking-widest">Conversations</span>
+          </div>
+
+          {/* Center play button */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-white/25 transition-all cursor-pointer">
+              <Play size={22} className="text-white ml-1" fill="white" />
+            </div>
+          </div>
+
+          {/* Bottom text */}
+          <div className="absolute bottom-16 left-5 md:left-8 max-w-xs">
+            <h1 className="text-white font-bold text-3xl md:text-4xl leading-[1.1] mb-2">
+              Speak <span className="text-[#f5c518]">naturally.</span>
+              <br />Connect confidently.
+            </h1>
+            <p className="text-white/50 text-sm leading-relaxed">
+              Real conversations. Real progress. Real you.
+            </p>
+          </div>
+
+          {/* Video progress bar + controls */}
+          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-gradient-to-t from-[#080808] to-transparent">
+            {/* Progress bar */}
+            <div className="w-full h-[3px] bg-white/15 rounded-full mb-3 cursor-pointer">
+              <div className="h-full w-1/12 bg-[#f5c518] rounded-full" />
+            </div>
+            {/* Controls row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Play size={14} className="text-white/60 cursor-pointer hover:text-white transition-colors" />
+                <Volume2 size={14} className="text-white/60 cursor-pointer hover:text-white transition-colors" />
+                <span className="text-white/35 text-[11px] tabular-nums">00:08 / 01:08</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Captions size={14} className="text-white/60 cursor-pointer hover:text-white transition-colors" />
+                <Maximize2 size={14} className="text-white/60 cursor-pointer hover:text-white transition-colors" />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── CHARACTERS ── */}
-      <section id="characters" className="px-5 md:px-8 pb-24 max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-white/35 text-xs font-semibold uppercase tracking-widest">Characters</h2>
-          <span className="text-white/20 text-xs">Free: Ethan & Noah</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {CHARACTERS.map((char) => (
-            <Link
-              key={char.id}
-              href={`/practice?character=${char.id}&auto=true`}
-              className="group relative overflow-hidden rounded-2xl bg-[#111111] border border-white/6 hover:border-white/14 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
-            >
-              {/* Photo */}
-              <div className="relative w-full overflow-hidden" style={{ aspectRatio: "3/4" }}>
-                {char.photo ? (
-                  <Image
-                    src={char.photo}
-                    alt={char.name}
-                    fill
-                    className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
-                    sizes="(max-width: 1024px) 50vw, 33vw"
-                  />
-                ) : (
-                  <div
-                    className="w-full h-full"
-                    style={{ background: `radial-gradient(circle at 38% 35%, ${char.color}50, ${char.color}10)` }}
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-[#111111]/15 to-transparent" />
+      {/* ── TRY IT NOW — CHAT DEMO ────────────────────────────────────────── */}
+      <section className="px-4 md:px-8 py-10 max-w-5xl mx-auto">
+        <div className="rounded-2xl bg-[#111] border border-white/8 overflow-hidden">
+          <div className="grid md:grid-cols-2 gap-0">
+            {/* Left: copy + CTA */}
+            <div className="p-8 md:p-10 flex flex-col justify-between">
+              <div>
+                <span className="text-[#f5c518] text-[10px] font-bold uppercase tracking-widest mb-4 block">Try it now</span>
+                <h2 className="text-white font-bold text-3xl md:text-4xl leading-[1.1] mb-4">
+                  Start speaking<br />
+                  <span className="text-[#f5c518]">in minutes.</span>
+                </h2>
+                <p className="text-white/45 text-sm leading-relaxed mb-8">
+                  Jump into a real conversation and feel the difference.
+                </p>
               </div>
 
-              {/* Info */}
-              <div className="p-4 -mt-1 relative z-10">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-white font-semibold text-[15px]">{char.name}</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+              {/* Avatar row + wave */}
+              <div>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="flex -space-x-2">
+                    {avatarChars.map((c) => (
+                      <div
+                        key={c.id}
+                        className="w-8 h-8 rounded-full border-2 border-[#111] overflow-hidden flex-shrink-0"
+                      >
+                        {c.photo ? (
+                          <Image
+                            src={c.photo}
+                            alt={c.name}
+                            width={32}
+                            height={32}
+                            className="object-cover object-top w-full h-full"
+                          />
+                        ) : (
+                          <div className="w-full h-full" style={{ background: `radial-gradient(circle, ${c.color}60, ${c.color}20)` }} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <VoiceWave />
                 </div>
-                <p className="text-white/40 text-xs mb-3">{char.role}</p>
 
-                {/* Action buttons */}
-                <div className="flex items-center gap-2 mb-3">
-                  {[Phone, MessageCircle, AudioLines].map((Icon, i) => (
-                    <div
-                      key={i}
-                      className="w-8 h-8 rounded-full bg-white/6 border border-white/8 flex items-center justify-center"
-                    >
-                      <Icon size={12} className="text-white/45" />
-                    </div>
-                  ))}
+                <Link
+                  href={isLoggedIn ? "/dashboard" : "/register"}
+                  className="inline-flex items-center gap-2 px-5 py-3 bg-[#f5c518] text-[#080808] font-bold text-sm rounded-full hover:bg-[#f5c518]/90 transition-all"
+                >
+                  Start a Conversation <ArrowRight size={14} />
+                </Link>
+              </div>
+            </div>
+
+            {/* Right: chat preview */}
+            <div className="border-t md:border-t-0 md:border-l border-white/6 p-8 md:p-10 flex flex-col justify-center gap-3 bg-[#0d0d0d]">
+              {/* Typing indicator */}
+              <div className="flex justify-end mb-1">
+                <TypingDots />
+              </div>
+
+              {/* Character message */}
+              <div className="flex flex-col gap-0.5 max-w-[85%]">
+                <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-white/8 border border-white/6">
+                  <p className="text-white text-sm font-medium">How was your day?</p>
+                  <p className="text-white/35 text-xs mt-0.5">Nasıl geçti günün?</p>
                 </div>
+                <div className="flex items-center gap-1.5 pl-1 mt-0.5">
+                  <Volume2 size={10} className="text-white/20" />
+                </div>
+              </div>
 
-                <p className="text-white/35 text-xs leading-relaxed line-clamp-2">{char.description}</p>
+              {/* User reply */}
+              <div className="flex flex-col gap-0.5 items-end">
+                <div className="px-4 py-3 rounded-2xl rounded-tr-sm bg-[#f5c518] max-w-[85%]">
+                  <p className="text-[#080808] text-sm font-semibold">It was great!</p>
+                  <p className="text-[#080808]/50 text-xs mt-0.5">Harikaydı!</p>
+                </div>
+              </div>
+
+              {/* Character follow-up */}
+              <div className="flex flex-col gap-0.5 max-w-[85%]">
+                <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-white/8 border border-white/6">
+                  <p className="text-white text-sm font-medium">What did you do?</p>
+                  <p className="text-white/35 text-xs mt-0.5">Ne yaptın?</p>
+                </div>
+                <div className="flex items-center gap-1.5 pl-1 mt-0.5">
+                  <Volume2 size={10} className="text-white/20" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── BUILD REAL SKILLS — CHARACTER CARDS ──────────────────────────── */}
+      <section id="characters" className="px-4 md:px-8 py-10 max-w-5xl mx-auto">
+        <div className="flex items-end justify-between mb-8">
+          <div>
+            <span className="text-[#f5c518] text-[10px] font-bold uppercase tracking-widest mb-2 block">Practice your way</span>
+            <h2 className="text-white font-bold text-3xl md:text-4xl">Build real skills.</h2>
+          </div>
+          <Link href="/dashboard" className="hidden sm:flex items-center gap-1.5 text-white/40 hover:text-white text-sm transition-colors">
+            See all <ArrowRight size={13} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { char: CHARACTERS.find((c) => c.id === "ethan")!, icon: MessageCircle, label: "Real Dialogues", desc: "Real-life conversations" },
+            { char: CHARACTERS.find((c) => c.id === "noah")!, icon: Headphones, label: "Listening", desc: "Train your ear" },
+            { char: CHARACTERS.find((c) => c.id === "lena")!, icon: BookOpen, label: "Vocabulary", desc: "Expand your words" },
+            { char: CHARACTERS.find((c) => c.id === "amelie")!, icon: Users, label: "Community", desc: "Learn together" },
+          ].map(({ char, icon: Icon, label, desc }) => (
+            <Link
+              key={label}
+              href={`/practice?character=${char?.id ?? "ethan"}&auto=true`}
+              className="group relative rounded-2xl overflow-hidden bg-[#111] border border-white/6 hover:border-white/14 transition-all duration-300 hover:-translate-y-0.5"
+              style={{ aspectRatio: "3/4" }}
+            >
+              {/* Character photo background */}
+              {char?.photo && (
+                <Image
+                  src={char.photo}
+                  alt={char.name}
+                  fill
+                  className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/30 to-transparent" />
+
+              {/* Icon badge */}
+              <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-[#f5c518]/15 border border-[#f5c518]/30 flex items-center justify-center">
+                <Icon size={12} className="text-[#f5c518]" />
+              </div>
+
+              {/* Bottom text */}
+              <div className="absolute bottom-0 left-0 right-0 p-3">
+                <p className="text-white font-semibold text-sm">{label}</p>
+                <p className="text-white/40 text-xs mt-0.5">{desc}</p>
               </div>
             </Link>
           ))}
         </div>
       </section>
 
-      {/* ── SCENARIOS ── */}
-      <section id="scenarios" className="px-5 md:px-8 pb-24 max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-white/35 text-xs font-semibold uppercase tracking-widest">Real-life scenarios</h2>
-          <span className="text-white/20 text-xs">20+ available</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {SCENARIOS.map((s) => (
-            <Link
-              key={s.title}
-              href={`/practice?character=ethan&scenario=${encodeURIComponent(s.title)}&auto=true`}
-              className="group flex items-center gap-4 p-4 rounded-xl bg-white/3 border border-white/6 hover:bg-white/5 hover:border-white/12 transition-all"
-            >
-              <span className="text-2xl flex-shrink-0">{s.icon}</span>
-              <div className="min-w-0">
-                <p className="text-white text-sm font-medium">{s.title}</p>
-                <p className="text-white/35 text-xs mt-0.5 truncate">{s.desc}</p>
+      {/* ── STATS BAR ─────────────────────────────────────────────────────── */}
+      <section className="px-4 md:px-8 py-8 max-w-5xl mx-auto">
+        <div className="rounded-2xl bg-[#111] border border-white/6 px-6 py-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              { value: "120K+", label: "Active learners" },
+              { value: "30+", label: "Languages" },
+              { value: "4.9", label: "User rating", star: true },
+            ].map(({ value, label, star }) => (
+              <div key={label} className="flex flex-col items-center text-center">
+                <span className="text-white font-bold text-xl">
+                  {star && <span className="text-[#f5c518] mr-1">★</span>}
+                  {value}
+                </span>
+                <span className="text-white/35 text-xs mt-0.5">{label}</span>
               </div>
-              <ArrowRight size={13} className="text-white/20 flex-shrink-0 ml-auto transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          ))}
+            ))}
+            {/* Community join */}
+            <div className="flex flex-col items-center text-center">
+              <div className="flex -space-x-1.5 mb-1">
+                {CHARACTERS.slice(0, 3).map((c) => (
+                  <div key={c.id} className="w-6 h-6 rounded-full border-2 border-[#111] overflow-hidden">
+                    {c.photo ? (
+                      <Image src={c.photo} alt={c.name} width={24} height={24} className="object-cover object-top w-full h-full" />
+                    ) : (
+                      <div className="w-full h-full" style={{ background: `radial-gradient(circle, ${c.color}60, ${c.color}20)` }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <Link href="/register" className="text-[#f5c518] text-xs font-semibold hover:underline">
+                Join a global community!
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── CTA STRIP ── */}
-      <section className="px-5 md:px-8 pb-24 max-w-5xl mx-auto">
-        <div className="rounded-2xl bg-white/4 border border-white/8 p-10 text-center">
-          {isLoggedIn === true ? (
+      {/* ── CTA STRIP ─────────────────────────────────────────────────────── */}
+      <section className="px-4 md:px-8 py-10 max-w-5xl mx-auto">
+        <div className="rounded-2xl border border-white/8 bg-[#111] p-10 text-center">
+          {isLoggedIn ? (
             <>
               <h3 className="text-white text-2xl font-bold mb-2">Continue your journey</h3>
               <p className="text-white/40 text-sm mb-6">Pick up where you left off.</p>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-all text-sm"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#f5c518] text-[#080808] font-bold rounded-full hover:bg-[#f5c518]/90 transition-all text-sm"
               >
                 Go to Dashboard <ArrowRight size={14} />
               </Link>
             </>
-          ) : isLoggedIn === false ? (
+          ) : (
             <>
               <h3 className="text-white text-2xl font-bold mb-2">Ready to start speaking?</h3>
-              <p className="text-white/40 text-sm mb-6">Free plan includes Ethan & Noah — no credit card required.</p>
+              <p className="text-white/40 text-sm mb-6">Free plan — no credit card required.</p>
               <Link
                 href="/register"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-full hover:bg-white/90 transition-all text-sm"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#f5c518] text-[#080808] font-bold rounded-full hover:bg-[#f5c518]/90 transition-all text-sm"
               >
                 Create free account <ArrowRight size={14} />
               </Link>
             </>
-          ) : (
-            <div className="h-[120px]" />
           )}
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer className="border-t border-white/6 px-5 md:px-8 py-5 flex items-center justify-between">
-        <span className="text-white/25 text-xs font-bold">olalabs</span>
+      {/* ── FOOTER ────────────────────────────────────────────────────────── */}
+      <footer className="border-t border-white/6 px-5 md:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
+        <span className="text-white/25 text-sm font-bold">olalabs</span>
         <div className="flex items-center gap-6 text-white/25 text-xs">
           <Link href="/pricing" className="hover:text-white/50 transition-colors">Pricing</Link>
-          {isLoggedIn === true ? (
+          {isLoggedIn ? (
             <Link href="/dashboard" className="hover:text-white/50 transition-colors">Dashboard</Link>
           ) : (
             <>

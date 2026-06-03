@@ -10,5 +10,41 @@
       "quality": 0.85
     },
     "createdAt": 1778948530543
+  },
+  {
+    "id": "task-T06",
+    "key": "T06",
+    "content": "Task completed: T06",
+    "namespace": "tasks",
+    "type": "task-outcome",
+    "metadata": {
+      "success": true,
+      "quality": 0.85
+    },
+    "createdAt": 1779640522639
+  },
+  {
+    "id": "task-T11",
+    "key": "T11",
+    "content": "Task completed: T11",
+    "namespace": "tasks",
+    "type": "task-outcome",
+    "metadata": {
+      "success": true,
+      "quality": 0.85
+    },
+    "createdAt": 1779695815469
+  },
+  {
+    "id": "task-T18",
+    "key": "T18",
+    "content": "Task completed: T18",
+    "namespace": "tasks",
+    "type": "task-outcome",
+    "metadata": {
+      "success": true,
+      "quality": 0.85
+    },
+    "createdAt": 1779714874824
   }
 ]

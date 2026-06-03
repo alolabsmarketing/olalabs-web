@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const [{ data: profile }, { data: recentSessions }, { data: usageDates }] = await Promise.all([
-    supabaseAdmin.from("profiles").select("email, plan, sessions_count, level, goal, language").eq("id", userId).single(),
+    supabaseAdmin.from("profiles").select("email, display_name, plan, sessions_count, level, goal, language").eq("id", userId).single(),
     supabaseAdmin.from("sessions")
       .select("started_at, ended_at, character_id, analysis_results(grammar_score, vocabulary_score, fluency_score)")
       .eq("user_id", userId).order("started_at", { ascending: false }).limit(20),
@@ -64,11 +64,12 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  type ProfileRow = { email?: string; plan?: string; sessions_count?: number; level?: string | null; goal?: string | null };
+  type ProfileRow = { email?: string; display_name?: string | null; plan?: string; sessions_count?: number; level?: string | null; goal?: string | null };
   const p = profile as ProfileRow | null;
 
   return NextResponse.json({
     email: p?.email ?? "",
+    displayName: p?.display_name ?? null,
     plan: p?.plan ?? "free",
     sessionsCount: p?.sessions_count ?? 0,
     totalMinutes,

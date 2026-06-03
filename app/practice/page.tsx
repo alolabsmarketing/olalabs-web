@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, Suspense, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { CHARACTERS } from "@/lib/characters";
@@ -10,7 +10,6 @@ import { translations, parseLang } from "@/lib/i18n";
 import { Send, Mic, MicOff, ArrowLeft, BarChart2, Volume2, VolumeX, Square, RotateCcw } from "lucide-react";
 import UpgradeModal, { type UpgradeReason } from "@/components/UpgradeModal";
 import { getPlanLimits } from "@/lib/plan";
-import ScenarioSelector from "@/components/ScenarioSelector";
 
 function useLang() {
   return useMemo(() => {
@@ -24,7 +23,7 @@ function CharacterDot({ characterId, size, className }: { characterId: string; s
   const char = CHARACTERS.find((c) => c.id === characterId) ?? CHARACTERS[0];
   return char.photo ? (
     <div className={cn("rounded-full flex-shrink-0 overflow-hidden", className)} style={{ width: size, height: size }}>
-      <Image src={char.photo} alt={char.name} width={size} height={size} className="object-cover object-top w-full h-full" />
+      <Image src={char.photo} alt={char.name} width={size} height={size} loading="eager" className="object-cover object-top w-full h-full" />
     </div>
   ) : (
     <div
@@ -67,11 +66,17 @@ function VoiceWave({ active }: { active: boolean }) {
 
 function PracticeContent() {
   const searchParams = useSearchParams();
-  const characterId = searchParams.get("character") ?? "ethan";
+  const characterParam = searchParams.get("character");
+  const characterId = characterParam ?? "ethan";
   const autoMode = searchParams.get("auto") === "true";
   const character = CHARACTERS.find((c) => c.id === characterId) ?? CHARACTERS[0];
   const lang = useLang();
   const T = translations[lang].practice;
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!characterParam) router.replace("/dashboard");
+  }, [characterParam, router]);
 
   const DEMO_LIMIT = 3;
 
@@ -84,7 +89,8 @@ function PracticeContent() {
   const [listening, setListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [scenario, setScenario] = useState("");
-  const [scenarioSet, setScenarioSet] = useState(autoMode);
+  // Scenario selection removed — characters start directly without scene selection
+  const [scenarioSet, setScenarioSet] = useState(true);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysis, setAnalysis] = useState<Record<string, unknown> | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
@@ -94,7 +100,6 @@ function PracticeContent() {
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [upgradeReason, setUpgradeReason] = useState<UpgradeReason | null>(null);
-  const [sessionMinutes, setSessionMinutes] = useState<number>(5);
   const [canAnalyze, setCanAnalyze] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -113,7 +118,6 @@ function PracticeContent() {
         setIsLoggedIn(d.loggedIn);
         if (d.loggedIn) {
           const limits = getPlanLimits(d.plan);
-          setSessionMinutes(limits.sessionMinutes === Infinity ? Infinity : limits.sessionMinutes);
           setCanAnalyze(limits.hasAnalysis);
         } else {
           const stored = parseInt(localStorage.getItem("ola_demo_count") ?? "0", 10);
@@ -136,7 +140,6 @@ function PracticeContent() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { error?: string };
-        if (err.error === "SESSION_LIMIT") { setUpgradeReason("session_limit"); return; }
         if (err.error === "CHARACTER_LOCKED") { setUpgradeReason("locked_character"); return; }
         setMessages([{ role: "assistant", content: T.errorMsg }]);
         return;
@@ -159,17 +162,6 @@ function PracticeContent() {
     }
   }, [scenarioSet, initialized, sendInitialGreeting]);
 
-  useEffect(() => {
-    if (!initialized || sessionMinutes === Infinity) return;
-    const deadline = Date.now() + sessionMinutes * 60 * 1000;
-    const id = setInterval(() => {
-      if (Date.now() >= deadline) {
-        clearInterval(id);
-        setUpgradeReason("session_time");
-      }
-    }, 15_000);
-    return () => clearInterval(id);
-  }, [initialized, sessionMinutes]);
 
   function cleanTextForTTS(text: string): string {
     return text
@@ -328,35 +320,6 @@ function PracticeContent() {
     }
   }
 
-  /* ── Scenario setup screen ── */
-  if (!scenarioSet) {
-    return (
-      <div className="bg-[#080808] flex min-h-screen items-center justify-center p-4">
-        <div className="w-full max-w-lg">
-          <Link href="/" className="flex items-center gap-2 text-white/60 hover:text-white text-sm mb-6 transition-colors">
-            <ArrowLeft size={14} /> {T.back}
-          </Link>
-          <div className="rounded-2xl bg-[#111] border border-white/8 p-8">
-            <div className="flex items-center gap-4 mb-6">
-              <CharacterDot characterId={character.id} size={64} />
-              <div>
-                <h2 className="text-white font-bold text-lg">{character.name}</h2>
-                <p style={{ color: character.color }} className="text-sm">{character.role}</p>
-              </div>
-            </div>
-            <p className="text-white/70 text-sm mb-6">{character.description}</p>
-            <ScenarioSelector
-              onSelect={(text) => {
-                setScenario(text);
-                setScenarioSet(true);
-              }}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   /* ── Main practice screen ── */
   return (
     <div className="bg-[#080808] flex flex-col min-h-screen">
@@ -364,7 +327,7 @@ function PracticeContent() {
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-5 py-3 border-b border-white/10 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <Link href="/" className="text-white/60 hover:text-white transition-colors mr-1">
+          <Link href="/dashboard" className="text-white/60 hover:text-white transition-colors mr-1">
             <ArrowLeft size={18} />
           </Link>
           <CharacterDot characterId={character.id} size={36} />
@@ -414,7 +377,7 @@ function PracticeContent() {
           )}
           {messages.length >= 4 && !canAnalyze && isLoggedIn && (
             <button
-              onClick={() => setUpgradeReason("session_limit")}
+              onClick={() => setUpgradeReason("voice_limit")}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full glass-pill text-white/40 hover:text-white/60 text-xs font-medium transition-all"
             >
               <BarChart2 size={12} />

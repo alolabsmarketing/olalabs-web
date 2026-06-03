@@ -7,11 +7,12 @@ import { translations, parseLang, type Lang } from "@/lib/i18n";
 
 interface ProfileDropdownProps {
   email?: string;
+  displayName?: string;
   plan?: string;
   lang?: Lang;
 }
 
-export function ProfileDropdown({ email = "", plan = "free", lang }: ProfileDropdownProps) {
+export function ProfileDropdown({ email = "", displayName, plan = "free", lang }: ProfileDropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -37,7 +38,8 @@ export function ProfileDropdown({ email = "", plan = "free", lang }: ProfileDrop
     }
   }
 
-  const initials = email ? email[0].toUpperCase() : "?";
+  const label = displayName || email.split("@")[0];
+  const initials = label ? label[0].toUpperCase() : "?";
 
   return (
     <div ref={ref} className="relative">
@@ -48,7 +50,7 @@ export function ProfileDropdown({ email = "", plan = "free", lang }: ProfileDrop
         <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold text-white">
           {initials}
         </div>
-        <span className="text-sm hidden sm:block">{email.split("@")[0]}</span>
+        <span className="text-sm hidden sm:block">{label}</span>
         <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 

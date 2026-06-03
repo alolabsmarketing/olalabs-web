@@ -3,8 +3,8 @@ import { anthropic } from "@/lib/claude";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getUserIdFromRequest } from "@/lib/auth-server";
 import { getCharacter } from "@/lib/characters";
-import { getPlanLimits, canUseCharacter } from "@/lib/plan";
-import type { DbProfile, DbDailyUsage, DbSession } from "@/lib/db-types";
+import { canUseCharacter } from "@/lib/plan";
+import type { DbProfile } from "@/lib/db-types";
 
 const MAX_TOKENS: Record<string, number> = {
   very_short: 80,
@@ -53,27 +53,6 @@ export async function POST(req: NextRequest) {
           .single<Pick<DbProfile, "plan">>();
 
         const userPlan = profile?.plan ?? "free";
-        const limits = getPlanLimits(userPlan);
-
-        if (limits.sessionsPerDay !== Infinity) {
-          const today = new Date().toISOString().split("T")[0];
-          const { data: usage } = await supabaseAdmin
-            .from("daily_usage")
-            .select("session_count")
-            .eq("user_id", userId)
-            .eq("date", today)
-            .single<Pick<DbDailyUsage, "session_count">>();
-
-          const count = usage?.session_count ?? 0;
-          if (count >= limits.sessionsPerDay) {
-            return NextResponse.json({ error: "SESSION_LIMIT" }, { status: 403 });
-          }
-
-          await supabaseAdmin.from("daily_usage").upsert(
-            { user_id: userId, date: today, session_count: count + 1 },
-            { onConflict: "user_id,date" }
-          );
-        }
 
         if (!canUseCharacter(userPlan, characterId)) {
           return NextResponse.json({ error: "CHARACTER_LOCKED" }, { status: 403 });
@@ -82,7 +61,7 @@ export async function POST(req: NextRequest) {
 
       const initMessage = scenario
         ? `Start the conversation. You're in the scene. Go.`
-        : "Start the session naturally. Don't say 'How can I help you?' — open as your character would.";
+        : "Start the conversation with a single natural sentence. Be direct. No greetings, no 'how can I help', no setup — just dive in as if mid-conversation.";
 
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
@@ -114,33 +93,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ content, sessionId: newSessionId });
     }
 
-    // Session duration limit check (non-initial messages)
-    if (userId && sessionId) {
-      const { data: sessionProfile } = await supabaseAdmin
-        .from("profiles")
-        .select("plan")
-        .eq("id", userId)
-        .single<Pick<DbProfile, "plan">>();
-
-      const userPlan = sessionProfile?.plan ?? "free";
-      const limits = getPlanLimits(userPlan);
-
-      if (limits.sessionMinutes !== Infinity) {
-        const { data: sessionRow } = await supabaseAdmin
-          .from("sessions")
-          .select("started_at")
-          .eq("id", sessionId)
-          .eq("user_id", userId)
-          .single<Pick<DbSession, "started_at">>();
-
-        if (sessionRow) {
-          const elapsed = (Date.now() - new Date(sessionRow.started_at).getTime()) / 60000;
-          if (elapsed >= limits.sessionMinutes) {
-            return NextResponse.json({ error: "SESSION_LIMIT" }, { status: 403 });
-          }
-        }
-      }
-    }
 
     let apiMessages = messages.map((m: { role: string; content: string }) => ({
       role: m.role as "user" | "assistant",

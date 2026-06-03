@@ -1,8 +1,6 @@
 export type Plan = 'free' | 'pro' | 'premium'
 
 export interface PlanLimits {
-  sessionsPerDay: number        // Infinity = unlimited
-  sessionMinutes: number        // Infinity = unlimited
   voiceMinutesPerDay: number    // Infinity = unlimited
   allowedCharacters: string[] | 'all'
   hasAnalysis: boolean
@@ -11,24 +9,18 @@ export interface PlanLimits {
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   free: {
-    sessionsPerDay: 3,
-    sessionMinutes: 5,
     voiceMinutesPerDay: 10,
     allowedCharacters: ['ethan', 'noah'],
     hasAnalysis: false,
     hasProgressCharts: false,
   },
   pro: {
-    sessionsPerDay: 10,
-    sessionMinutes: 20,
     voiceMinutesPerDay: Infinity,
     allowedCharacters: 'all',
     hasAnalysis: true,
     hasProgressCharts: false,
   },
   premium: {
-    sessionsPerDay: Infinity,
-    sessionMinutes: Infinity,
     voiceMinutesPerDay: Infinity,
     allowedCharacters: 'all',
     hasAnalysis: true,

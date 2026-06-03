@@ -89,7 +89,7 @@ export default function CharacterCard({ character, locked, label }: Props) {
           {card}
         </button>
       ) : (
-        <Link href={`/practice?character=${character.id}`} title={label}>
+        <Link href={`/practice?character=${character.id}&auto=true`} title={label}>
           {card}
         </Link>
       )}

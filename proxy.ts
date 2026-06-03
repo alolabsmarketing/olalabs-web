@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PROTECTED = ["/dashboard", "/practice", "/profile", "/characters", "/onboarding"];
+const PROTECTED = ["/dashboard", "/practice", "/profile", "/characters/editor", "/onboarding"];
 const AUTH_ONLY = ["/login", "/register"];
 
 function isTokenValid(token: string): boolean {
@@ -18,6 +18,7 @@ function isTokenValid(token: string): boolean {
 
 export function proxy(req: NextRequest) {
   const token = req.cookies.get("sb-access-token")?.value;
+  const refreshToken = req.cookies.get("sb-refresh-token")?.value;
   const { pathname } = req.nextUrl;
 
   const isProtected = PROTECTED.some((r) => pathname.startsWith(r));
@@ -26,6 +27,11 @@ export function proxy(req: NextRequest) {
   const hasValidToken = !!token && isTokenValid(token);
 
   if (isProtected && !hasValidToken) {
+    if (refreshToken) {
+      const refreshUrl = new URL("/api/auth/refresh", req.url);
+      refreshUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(refreshUrl);
+    }
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
@@ -40,6 +46,6 @@ export function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:png|jpg|jpeg|svg|webp|ico|gif|woff|woff2|ttf)).*)",
   ],
 };

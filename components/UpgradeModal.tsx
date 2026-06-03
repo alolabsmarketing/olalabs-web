@@ -3,13 +3,10 @@ import { useState } from "react";
 import { X, Zap, Star } from "lucide-react";
 
 export type UpgradeReason =
-  | "session_limit" | "voice_limit" | "session_time"
-  | "locked_character" | "locked_scenario" | "analysis";
+  | "voice_limit" | "locked_character" | "locked_scenario" | "analysis";
 
 const COPY: Record<UpgradeReason, { title: string; subtitle: string }> = {
-  session_limit:    { title: "Daily session limit reached",  subtitle: "You've used your 3 free sessions today. Upgrade to keep practicing." },
-  voice_limit:      { title: "Daily voice limit reached",    subtitle: "You've used your 10 minutes of free voice practice. Upgrade for unlimited voice." },
-  session_time:     { title: "Session time limit reached",   subtitle: "Free sessions are 5 minutes. Upgrade to Pro for 20-minute sessions." },
+  voice_limit:      { title: "Daily voice limit reached",    subtitle: "You've used your 10 minutes of free voice practice today. Upgrade for unlimited practice." },
   locked_character: { title: "Character locked",            subtitle: "This character is available on Pro and above." },
   locked_scenario:  { title: "Scenario locked",             subtitle: "This scenario is available on Pro and above." },
   analysis:         { title: "Analysis is a Pro feature",    subtitle: "Get detailed feedback on grammar, vocabulary, and fluency." },
@@ -47,9 +44,12 @@ export default function UpgradeModal({ reason, onClose }: { reason: UpgradeReaso
             className="w-full flex items-center justify-between px-5 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-colors disabled:opacity-60">
             <div className="text-left">
               <div className="text-white font-semibold flex items-center gap-2"><Zap size={16} /> Pro</div>
-              <div className="text-indigo-200 text-xs">10 sessions/day · 20 min each · All characters</div>
+              <div className="text-indigo-200 text-xs">Unlimited practice · All characters · Analysis</div>
             </div>
-            <div className="text-white font-bold">$9<span className="text-indigo-300 text-xs font-normal">/mo</span></div>
+            <div className="text-right">
+              <div className="text-white font-bold">$4.50<span className="text-indigo-300 text-xs font-normal">/mo</span></div>
+              <div className="text-indigo-300/60 text-xs line-through">$9/mo</div>
+            </div>
           </button>
           <button onClick={() => upgrade("premium")} disabled={loading !== null}
             className="w-full flex items-center justify-between px-5 py-4 bg-amber-600/20 border border-amber-500/40 hover:bg-amber-600/30 rounded-xl transition-colors disabled:opacity-60">
@@ -57,7 +57,10 @@ export default function UpgradeModal({ reason, onClose }: { reason: UpgradeReaso
               <div className="text-amber-400 font-semibold flex items-center gap-2"><Star size={16} /> Premium</div>
               <div className="text-amber-200/60 text-xs">Unlimited everything · Progress charts</div>
             </div>
-            <div className="text-amber-400 font-bold">$19<span className="text-amber-400/60 text-xs font-normal">/mo</span></div>
+            <div className="text-right">
+              <div className="text-amber-400 font-bold">$9.50<span className="text-amber-400/60 text-xs font-normal">/mo</span></div>
+              <div className="text-amber-300/40 text-xs line-through">$19/mo</div>
+            </div>
           </button>
         </div>
         <button onClick={onClose} className="mt-4 w-full text-white/30 text-xs hover:text-white/50 py-2">Maybe later</button>

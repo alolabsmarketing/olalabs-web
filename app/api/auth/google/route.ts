@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
-  const { origin } = new URL(req.url);
+  const { origin, searchParams } = new URL(req.url);
 
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     return NextResponse.redirect(`${origin}/login?error=google_not_configured`);
   }
+
+  const mobile = searchParams.get("mobile") === "true";
 
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
@@ -14,6 +16,7 @@ export async function GET(req: NextRequest) {
     scope: "openid email profile",
     access_type: "offline",
     prompt: "select_account",
+    ...(mobile ? { state: "mobile" } : {}),
   });
 
   return NextResponse.redirect(

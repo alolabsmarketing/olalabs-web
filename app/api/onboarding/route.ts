@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
   const { native_language, practice_language, level, goal } = body;
 
   const update: Record<string, string> = {};
+  if (user.email) update.email = user.email;
   if (native_language)  update.native_language  = native_language;
   if (practice_language) update.practice_language = practice_language;
   if (level) update.level = level;
