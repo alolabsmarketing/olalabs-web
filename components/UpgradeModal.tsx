@@ -6,7 +6,7 @@ export type UpgradeReason =
   | "voice_limit" | "locked_character" | "locked_scenario" | "analysis";
 
 const COPY: Record<UpgradeReason, { title: string; subtitle: string }> = {
-  voice_limit:      { title: "Daily voice limit reached",    subtitle: "You've used your 10 minutes of free voice practice today. Upgrade for unlimited practice." },
+  voice_limit:      { title: "Daily voice limit reached",    subtitle: "You've used your 5 minutes of free voice practice today. Upgrade for unlimited practice." },
   locked_character: { title: "Character locked",            subtitle: "This character is available on Pro and above." },
   locked_scenario:  { title: "Scenario locked",             subtitle: "This scenario is available on Pro and above." },
   analysis:         { title: "Analysis is a Pro feature",    subtitle: "Get detailed feedback on grammar, vocabulary, and fluency." },

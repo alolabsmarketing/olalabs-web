@@ -9,7 +9,7 @@ export interface PlanLimits {
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   free: {
-    voiceMinutesPerDay: 10,
+    voiceMinutesPerDay: 5,
     allowedCharacters: ['ethan', 'noah'],
     hasAnalysis: false,
     hasProgressCharts: false,
