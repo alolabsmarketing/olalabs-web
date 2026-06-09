@@ -137,7 +137,7 @@ export default function LandingPage() {
   }
 
   const avatarChars = CHARACTERS.slice(0, 4);
-  const amelie = CHARACTERS.find((c) => c.id === "amelie");
+  const heroChar = CHARACTERS.find((c) => c.id === "nadia");
 
   return (
     <div className="min-h-screen bg-[#080808] text-white overflow-x-hidden">
@@ -262,10 +262,10 @@ export default function LandingPage() {
         <div className="relative rounded-2xl overflow-hidden bg-[#0d0d0d] border border-white/8" style={{ aspectRatio: "16/9" }}>
           {/* Character image — placeholder until video is ready */}
           {/* TODO: Replace <Image> with <video> tag when video asset is ready */}
-          {amelie?.photo && (
+          {heroChar?.photo && (
             <Image
-              src={amelie.photo}
-              alt="Amelie — OlaLabs character"
+              src={heroChar.photo}
+              alt="Nadia — OlaLabs character"
               fill
               priority
               className="object-cover object-top"
@@ -431,10 +431,10 @@ export default function LandingPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { char: CHARACTERS.find((c) => c.id === "ethan")!, icon: MessageCircle, label: "Real Dialogues", desc: "Real-life conversations" },
-            { char: CHARACTERS.find((c) => c.id === "noah")!, icon: Headphones, label: "Listening", desc: "Train your ear" },
-            { char: CHARACTERS.find((c) => c.id === "lena")!, icon: BookOpen, label: "Vocabulary", desc: "Expand your words" },
-            { char: CHARACTERS.find((c) => c.id === "amelie")!, icon: Users, label: "Community", desc: "Learn together" },
+            { char: CHARACTERS.find((c) => c.id === "ethan")!, icon: MessageCircle, label: "English Tutor", desc: "Real-life conversations" },
+            { char: CHARACTERS.find((c) => c.id === "nadia")!, icon: Users, label: "Job Interviews", desc: "Practice with a recruiter" },
+            { char: CHARACTERS.find((c) => c.id === "dr-chen")!, icon: BookOpen, label: "Medical Talks", desc: "Describe symptoms clearly" },
+            { char: CHARACTERS.find((c) => c.id === "morgan")!, icon: Headphones, label: "Visa Interview", desc: "Answer under pressure" },
           ].map(({ char, icon: Icon, label, desc }) => (
             <Link
               key={label}
