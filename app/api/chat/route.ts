@@ -5,6 +5,7 @@ import { getUserIdFromRequest } from "@/lib/auth-server";
 import { getCharacter } from "@/lib/characters";
 import { canUseCharacter } from "@/lib/plan";
 import type { DbProfile } from "@/lib/db-types";
+import { getCustomCharacterById, buildCustomCharacterSystemPrompt } from "@/lib/custom-characters";
 
 const MAX_TOKENS: Record<string, number> = {
   very_short: 80,
@@ -23,7 +24,68 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { characterId, scenario: rawScenario, messages, isInitial, sessionId } = await req.json();
+    const { characterId, customCharacterId, scenario: rawScenario, messages, isInitial, sessionId } = await req.json();
+
+    // ── Custom character path ──────────────────────────────────────────────────
+    if (customCharacterId) {
+      const userId = await getUserIdFromRequest(req);
+      if (!userId) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+
+      const customChar = await getCustomCharacterById(customCharacterId, userId);
+      if (!customChar) return NextResponse.json({ error: "Character not found" }, { status: 404 });
+
+      const systemPrompt = buildCustomCharacterSystemPrompt(customChar);
+
+      if (isInitial) {
+        const response = await anthropic.messages.create({
+          model: "claude-sonnet-4-6",
+          max_tokens: 150,
+          system: systemPrompt,
+          messages: [{ role: "user", content: "Start the session naturally." }],
+        });
+        const content = response.content[0].type === "text" ? response.content[0].text : "";
+
+        const { data: session } = await supabaseAdmin
+          .from("sessions")
+          .insert({ user_id: userId, character_id: "custom", custom_character_id: customCharacterId, scenario: null })
+          .select("id")
+          .single();
+
+        const newSessionId = session?.id ?? null;
+        if (newSessionId) {
+          await supabaseAdmin.from("messages").insert({ session_id: newSessionId, role: "assistant", content });
+        }
+
+        return NextResponse.json({ content, sessionId: newSessionId });
+      }
+
+      let apiMessages = (messages as Array<{ role: string; content: string }>).map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+      if (apiMessages.length > 0 && apiMessages[0].role === "assistant") {
+        apiMessages = [{ role: "user", content: "Begin the session." }, ...apiMessages];
+      }
+
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 150,
+        system: systemPrompt,
+        messages: apiMessages,
+      });
+      const content = response.content[0].type === "text" ? response.content[0].text : "";
+
+      if (userId && sessionId) {
+        const lastUserMessage = (messages as Array<{ role: string; content: string }>)[messages.length - 1];
+        await supabaseAdmin.from("messages").insert([
+          { session_id: sessionId, role: "user", content: lastUserMessage.content },
+          { session_id: sessionId, role: "assistant", content },
+        ]);
+      }
+
+      return NextResponse.json({ content });
+    }
+    // ── Standard character path (existing code unchanged below) ───────────────
 
     const character = getCharacter(characterId);
     if (!character) {

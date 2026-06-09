@@ -68,6 +68,7 @@ function PracticeContent() {
   const searchParams = useSearchParams();
   const characterParam = searchParams.get("character");
   const characterId = characterParam ?? "ethan";
+  const customCharacterId = searchParams.get("customCharacter") ?? null;
   const autoMode = searchParams.get("auto") === "true";
   const character = CHARACTERS.find((c) => c.id === characterId) ?? CHARACTERS[0];
   const lang = useLang();
@@ -100,6 +101,20 @@ function PracticeContent() {
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [upgradeReason, setUpgradeReason] = useState<UpgradeReason | null>(null);
+
+  // Memory update on unload for custom characters
+  useEffect(() => {
+    if (!customCharacterId || !sessionId) return;
+    const handler = () => {
+      fetch(`/api/characters/custom/${customCharacterId}/memory`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      }).catch(() => {});
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [customCharacterId, sessionId]);
   const [canAnalyze, setCanAnalyze] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -136,7 +151,7 @@ function PracticeContent() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characterId, scenario, messages: [], isInitial: true }),
+        body: JSON.stringify({ characterId, customCharacterId, scenario, messages: [], isInitial: true }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { error?: string };
@@ -251,7 +266,7 @@ function PracticeContent() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characterId, scenario, messages: updated, sessionId }),
+        body: JSON.stringify({ characterId, customCharacterId, scenario, messages: updated, sessionId }),
       });
       const data = await res.json();
       const content: string =
