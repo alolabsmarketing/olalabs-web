@@ -1,8 +1,9 @@
 export type Plan = 'free' | 'pro' | 'premium'
 
 export interface PlanLimits {
-  voiceMinutesPerDay: number    // Infinity = unlimited
+  voiceMinutesPerDay: number
   allowedCharacters: string[] | 'all'
+  customCharacters: number
   hasAnalysis: boolean
   hasProgressCharts: boolean
 }
@@ -10,19 +11,22 @@ export interface PlanLimits {
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   free: {
     voiceMinutesPerDay: 5,
-    allowedCharacters: ['ethan', 'noah'],
+    allowedCharacters: ['ethan'],
+    customCharacters: 0,
     hasAnalysis: false,
     hasProgressCharts: false,
   },
   pro: {
     voiceMinutesPerDay: Infinity,
     allowedCharacters: 'all',
+    customCharacters: 1,
     hasAnalysis: true,
     hasProgressCharts: false,
   },
   premium: {
     voiceMinutesPerDay: Infinity,
     allowedCharacters: 'all',
+    customCharacters: 3,
     hasAnalysis: true,
     hasProgressCharts: true,
   },
@@ -40,7 +44,10 @@ export function canUseCharacter(plan: string | null | undefined, characterId: st
   return limits.allowedCharacters.includes(characterId)
 }
 
-// Estimates TTS audio duration from text: ~150 wpm = 2.5 words/sec
+export function getCustomCharacterLimit(plan: string | null | undefined): number {
+  return getPlanLimits(plan).customCharacters
+}
+
 export function estimateVoiceSeconds(text: string): number {
   return Math.ceil(text.split(/\s+/).filter(Boolean).length / 2.5)
 }
