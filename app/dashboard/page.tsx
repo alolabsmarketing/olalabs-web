@@ -7,8 +7,10 @@ import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { translations, parseLang } from "@/lib/i18n";
 import { MessageCircle, Clock, Star, Check, Zap, Flame } from "lucide-react";
 import CheckoutButton from "@/components/CheckoutButton";
-import { canUseCharacter } from "@/lib/plan";
+import { canUseCharacter, getCustomCharacterLimit } from "@/lib/plan";
 import CharacterCard from "@/components/CharacterCard";
+import CustomCharacterCard from "@/components/CustomCharacterCard";
+import type { DbCustomCharacter } from "@/lib/db-types";
 
 function calculateStreak(dates: Array<{ date: string }>): number {
   if (!dates?.length) return 0;
@@ -55,6 +57,12 @@ async function getUserData() {
     .order("date", { ascending: false })
     .limit(60);
 
+  const { data: customCharsData } = await supabaseAdmin
+    .from("custom_characters")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
   const streak = calculateStreak(usageDates ?? []);
 
   const scores = (recentSessions ?? [])
@@ -100,6 +108,7 @@ async function getUserData() {
     language: profileRec?.language as string | null ?? null,
     streak,
     charStats,
+    customCharacters: (customCharsData ?? []) as DbCustomCharacter[],
   };
 }
 
@@ -209,6 +218,64 @@ export default async function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* My Characters */}
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <h2 className="text-white font-semibold text-base">My Characters</h2>
+              {userData.plan === "free" && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#a78bfa]/15 text-[#a78bfa] border border-[#a78bfa]/25">
+                  PRO
+                </span>
+              )}
+            </div>
+            {getCustomCharacterLimit(userData.plan) > 0 && (
+              <span className="text-white/30 text-xs">
+                {userData.customCharacters.length} / {getCustomCharacterLimit(userData.plan)} used
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Existing custom characters */}
+            {userData.customCharacters.map((char: DbCustomCharacter) => (
+              <CustomCharacterCard key={char.id} character={char} />
+            ))}
+
+            {/* Add new slot */}
+            {getCustomCharacterLimit(userData.plan) > 0 &&
+              userData.customCharacters.length < getCustomCharacterLimit(userData.plan) && (
+                <Link href="/characters/new">
+                  <div className="aspect-[3/4] flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 text-white/30 hover:border-white/25 hover:text-white/60 hover:bg-white/3 transition-all cursor-pointer">
+                    <span className="text-2xl leading-none">＋</span>
+                    <span className="text-xs font-medium">Add character</span>
+                  </div>
+                </Link>
+              )}
+
+            {/* Upgrade prompt if free */}
+            {getCustomCharacterLimit(userData.plan) === 0 && (
+              <div className="aspect-[3/4] flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/8 text-white/20">
+                <span className="text-2xl leading-none">✦</span>
+                <span className="text-xs font-medium">Available on Pro</span>
+              </div>
+            )}
+
+            {/* Locked premium slots for pro users */}
+            {userData.plan === "pro" &&
+              Array.from({ length: getCustomCharacterLimit("premium") - getCustomCharacterLimit("pro") }).map((_, i) => (
+                <div
+                  key={i}
+                  className="aspect-[3/4] flex flex-col items-center justify-center gap-2 rounded-2xl border border-white/5 text-white/15 bg-white/[0.01]"
+                >
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/30">
+                    ✦ Premium
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
 
         {/* Characters */}
         <div className="mb-10" id="characters">
