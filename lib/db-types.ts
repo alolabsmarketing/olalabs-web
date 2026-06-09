@@ -36,3 +36,16 @@ export interface AnalysisResult {
   tips: [string, string, string];
   summary: string;
 }
+
+export interface DbCustomCharacter {
+  id: string;
+  user_id: string;
+  name: string;
+  relationship_hint: string | null;
+  personality_prompt: string;
+  avatar_url: string | null;
+  voice_id: string | null;
+  memory_summary: string | null;
+  memory_updated_at: string | null;
+  created_at: string;
+}
