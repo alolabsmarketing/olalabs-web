@@ -178,7 +178,7 @@ export default async function DashboardPage() {
                 : "0h",
             },
             { icon: Star, label: Td.avgScore, value: userData?.avgScore ? `${userData.avgScore}%` : "—" },
-            { icon: Flame, label: "Day Streak", value: userData?.streak ? `${userData.streak}🔥` : "—" },
+            { icon: Flame, label: Td.dayStreak, value: userData?.streak ? `${userData.streak}🔥` : "—" },
           ].map(({ icon: Icon, label, value }) => (
             <div key={label} className="rounded-2xl bg-white/4 border border-white/6 p-4 text-center">
               <Icon size={18} className="text-white/30 mx-auto mb-2" />
@@ -191,7 +191,7 @@ export default async function DashboardPage() {
         {/* Recent Activity */}
         {Object.keys(userData.charStats).length > 0 && (
           <div className="mb-10">
-            <h2 className="text-white font-semibold text-base mb-4">Recent Activity</h2>
+            <h2 className="text-white font-semibold text-base mb-4">{Td.recentActivity}</h2>
             <div className="flex flex-col gap-2">
               {CHARACTERS.filter((c) => userData.charStats[c.id])
                 .sort((a, b) => (userData.charStats[b.id]?.sessions ?? 0) - (userData.charStats[a.id]?.sessions ?? 0))

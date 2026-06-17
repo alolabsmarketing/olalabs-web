@@ -1,24 +1,17 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, Suspense, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { CHARACTERS } from "@/lib/characters";
 import { cn } from "@/lib/utils";
-import { translations, parseLang } from "@/lib/i18n";
+import { translations } from "@/lib/i18n";
+import { useLocale } from "@/lib/useLocale";
 import { Send, Mic, MicOff, ArrowLeft, BarChart2, Volume2, VolumeX, Square, RotateCcw } from "lucide-react";
 import UpgradeModal, { type UpgradeReason } from "@/components/UpgradeModal";
 import { getPlanLimits, PLAN_LIMITS } from "@/lib/plan";
 import UsageBar from "@/components/UsageBar";
-
-function useLang() {
-  return useMemo(() => {
-    if (typeof document === "undefined") return parseLang("en");
-    const match = document.cookie.match(/(?:^|;\s*)lang=([^;]+)/);
-    return parseLang(match?.[1]);
-  }, []);
-}
 
 function CharacterDot({ characterId, size, className }: { characterId: string; size: number; className?: string }) {
   const char = CHARACTERS.find((c) => c.id === characterId) ?? CHARACTERS[0];
@@ -70,6 +63,8 @@ interface ScenarioCharacter {
   role: string;
   personality: string;
   systemPrompt: string;
+  voiceId?: string;
+  gender?: string;
 }
 
 function PracticeContent() {
@@ -86,7 +81,8 @@ function PracticeContent() {
     catch { return null; }
   })();
   const character = CHARACTERS.find((c) => c.id === characterId) ?? CHARACTERS[0];
-  const lang = useLang();
+  const { lang } = useLocale();
+  const locale = lang;
   const T = translations[lang].practice;
   const router = useRouter();
 
@@ -181,8 +177,8 @@ function PracticeContent() {
     setLoading(true);
     try {
       const body = scenarioCharacter
-        ? { scenarioCharacter, messages: [], isInitial: true }
-        : { characterId, customCharacterId, scenario, messages: [], isInitial: true };
+        ? { scenarioCharacter, messages: [], isInitial: true, locale }
+        : { characterId, customCharacterId, scenario, messages: [], isInitial: true, locale };
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -204,7 +200,7 @@ function PracticeContent() {
       setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [characterId, scenario, initialized, scenarioCharacter]);
+  }, [characterId, scenario, initialized, scenarioCharacter, lang]);
 
   useEffect(() => {
     if (scenarioSet && !initialized) {
@@ -259,10 +255,17 @@ function PracticeContent() {
     stopAudio();
     setIsSpeaking(true);
     try {
+      // In scenario mode, pass the scenario character's voiceId directly;
+      // otherwise fall back to the regular characterId lookup.
+      const ttsPayload =
+        scenarioMode && scenarioCharacter?.voiceId
+          ? { text: cleaned, voiceId: scenarioCharacter.voiceId }
+          : { text: cleaned, characterId };
+
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: cleaned, characterId }),
+        body: JSON.stringify(ttsPayload),
       });
       if (!res.ok) {
         if (res.status === 403) {
@@ -299,8 +302,8 @@ function PracticeContent() {
 
     try {
       const msgBody = scenarioCharacter
-        ? { scenarioCharacter, messages: updated, sessionId }
-        : { characterId, customCharacterId, scenario, messages: updated, sessionId };
+        ? { scenarioCharacter, messages: updated, sessionId, locale }
+        : { characterId, customCharacterId, scenario, messages: updated, sessionId, locale };
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

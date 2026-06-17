@@ -64,12 +64,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Azure Speech key not configured" }, { status: 500 });
   }
 
+  // Scenario characters pass a voiceId directly instead of a characterId
+  const SCENARIO_VOICE_ALLOWLIST = new Set([
+    "en-US-AndrewNeural",
+    "en-US-BrianNeural",
+    "en-US-RogerNeural",
+    "en-US-EmmaNeural",
+    "en-US-AvaNeural",
+    "en-US-AriaNeural",
+  ]);
+
   try {
-    const { text, characterId } = await req.json();
+    const { text, characterId, voiceId: rawVoiceId } = await req.json();
     if (!text?.trim()) return NextResponse.json({ error: "No text provided" }, { status: 400 });
     if (text.length > MAX_TTS_CHARS) {
       return NextResponse.json({ error: "Text too long" }, { status: 400 });
     }
+    // Validate scenario voiceId against allowlist to prevent SSML injection
+    const scenarioVoiceId: string | undefined =
+      rawVoiceId && SCENARIO_VOICE_ALLOWLIST.has(rawVoiceId) ? rawVoiceId : undefined;
 
     const userId = await getUserIdFromRequest(req);
     if (userId) {
@@ -107,17 +120,37 @@ export async function POST(req: NextRequest) {
     const cleaned = cleanText(text);
     if (!cleaned) return NextResponse.json({ error: "No speakable text" }, { status: 400 });
 
-    const character = getCharacter(characterId);
-    const tts: Partial<CharacterTTS> = character?.tts ?? {};
-    const voiceName = tts.azureVoiceName ?? "en-US-JennyNeural";
+    let voiceName: string;
+    let ssmlStyle: string | undefined;
+    let ssmlStyleDegree: number | undefined;
+    let ssmlRate: number | undefined;
+    let ssmlPitch: number | undefined;
+
+    if (scenarioVoiceId) {
+      // Scenario mode: use the AI-selected voice with natural-sounding SSML defaults
+      voiceName = scenarioVoiceId;
+      ssmlStyle = "chat";
+      ssmlStyleDegree = 1.5;
+      ssmlRate = 0.95; // slightly slower than default = more natural
+      ssmlPitch = 0.98; // slightly lower = less robotic
+    } else {
+      // Regular character mode: use per-character TTS settings
+      const character = getCharacter(characterId);
+      const tts: Partial<CharacterTTS> = character?.tts ?? {};
+      voiceName = tts.azureVoiceName ?? "en-US-JennyNeural";
+      ssmlStyle = tts.azureStyle;
+      ssmlStyleDegree = tts.azureStyleDegree;
+      ssmlRate = tts.rate;
+      ssmlPitch = tts.pitch;
+    }
 
     const ssml = buildSsml(
       cleaned,
       voiceName,
-      tts.azureStyle,
-      tts.azureStyleDegree,
-      tts.rate,
-      tts.pitch
+      ssmlStyle,
+      ssmlStyleDegree,
+      ssmlRate,
+      ssmlPitch
     );
 
     const response = await fetch(

@@ -13,8 +13,23 @@ const MAX_TOKENS: Record<string, number> = {
   very_short: 80, short: 130, medium: 200, long: 300,
 };
 
+const LANG_NAMES: Record<string, string> = {
+  en: "English",
+  es: "Spanish",
+  de: "German",
+  fr: "French",
+  tr: "Turkish",
+};
+
+function buildLangInstruction(locale: string | undefined | null): string {
+  if (!locale || locale === "en") return "";
+  const langName = LANG_NAMES[locale];
+  if (!langName) return "";
+  return `\n\nIMPORTANT: The user's preferred language is ${langName}. Respond in ${langName} unless the user explicitly writes in another language.`;
+}
+
 export async function POST(req: NextRequest) {
-  const { characterId, customCharacterId, scenario: rawScenario, messages, isInitial, sessionId } = await req.json();
+  const { characterId, customCharacterId, scenario: rawScenario, messages, isInitial, sessionId, locale } = await req.json();
 
   // ── Auth setup (needed by both paths) ─────────────────────────────────────
   const authHeader = req.headers.get("authorization");
@@ -39,7 +54,7 @@ export async function POST(req: NextRequest) {
       return new Response(JSON.stringify({ error: "Character not found" }), { status: 404 });
     }
 
-    const systemPrompt = buildCustomCharacterSystemPrompt(customChar);
+    const systemPrompt = buildCustomCharacterSystemPrompt(customChar) + buildLangInstruction(locale);
 
     let apiMessages = isInitial
       ? [{ role: "user" as const, content: "Start the session naturally." }]
@@ -126,7 +141,7 @@ export async function POST(req: NextRequest) {
     ? `\n\nSCENARIO: ${scenario}\n\nDrop into this scenario immediately — you're already in the scene. Take the role naturally. Don't announce it. Just start.`
     : "";
 
-  const systemPrompt = character.systemPrompt + scenarioPart;
+  const systemPrompt = character.systemPrompt + scenarioPart + buildLangInstruction(locale);
   const maxTokens = MAX_TOKENS[character.style.responseLength] ?? 150;
 
   if (!canUseCharacter(effectivePlan, characterId)) {

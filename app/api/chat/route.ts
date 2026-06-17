@@ -14,6 +14,21 @@ const MAX_TOKENS: Record<string, number> = {
   long: 300,
 };
 
+const LANG_NAMES: Record<string, string> = {
+  en: "English",
+  es: "Spanish",
+  de: "German",
+  fr: "French",
+  tr: "Turkish",
+};
+
+function buildLangInstruction(locale: string | undefined | null): string {
+  if (!locale || locale === "en") return "";
+  const langName = LANG_NAMES[locale];
+  if (!langName) return "";
+  return `\n\nIMPORTANT: The user's preferred language is ${langName}. Respond in ${langName} unless the user explicitly writes in another language.`;
+}
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey || !apiKey.startsWith("sk-ant-")) {
@@ -24,7 +39,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { characterId, customCharacterId, scenarioCharacter, scenario: rawScenario, messages, isInitial, sessionId } = await req.json();
+    const { characterId, customCharacterId, scenarioCharacter, scenario: rawScenario, messages, isInitial, sessionId, locale } = await req.json();
 
     // ── Free Scenario path ─────────────────────────────────────────────────────
     if (scenarioCharacter) {
@@ -36,7 +51,7 @@ export async function POST(req: NextRequest) {
 
       // Sanitize client-supplied system prompt to prevent prompt injection.
       // Truncate to a safe length and strip control characters.
-      const scenarioSystemPrompt = rawScenarioSystemPrompt.slice(0, 1000).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").trim();
+      const scenarioSystemPrompt = rawScenarioSystemPrompt.slice(0, 1000).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").trim() + buildLangInstruction(locale);
 
       const userId = await getUserIdFromRequest(req);
 
@@ -105,7 +120,7 @@ export async function POST(req: NextRequest) {
       const customChar = await getCustomCharacterById(customCharacterId, userId);
       if (!customChar) return NextResponse.json({ error: "Character not found" }, { status: 404 });
 
-      const systemPrompt = buildCustomCharacterSystemPrompt(customChar);
+      const systemPrompt = buildCustomCharacterSystemPrompt(customChar) + buildLangInstruction(locale);
 
       if (isInitial) {
         const response = await anthropic.messages.create({
@@ -172,7 +187,7 @@ export async function POST(req: NextRequest) {
       ? `\n\nSCENARIO: ${scenario}\n\nDrop into this scenario immediately — you're already in the scene when the conversation begins. Take whatever role fits naturally (interviewer, staff, colleague, or yourself in a real-world situation). Don't announce the scenario or explain it. Just start.`
       : "";
 
-    const systemPrompt = character.systemPrompt + scenarioPart;
+    const systemPrompt = character.systemPrompt + scenarioPart + buildLangInstruction(locale);
     const maxTokens = MAX_TOKENS[character.style.responseLength] ?? 150;
 
     const userId = await getUserIdFromRequest(req);

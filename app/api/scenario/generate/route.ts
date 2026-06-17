@@ -36,12 +36,22 @@ export async function POST(req: NextRequest) {
 
 Scenario: ${sanitized}
 
+Also choose the most appropriate voice from this list based on the character's role, gender, and personality:
+- en-US-AndrewNeural: male, warm and conversational (good for coaches, teachers)
+- en-US-BrianNeural: male, professional and clear (good for managers, interviewers)
+- en-US-RogerNeural: male, confident and authoritative (good for officials, executives)
+- en-US-EmmaNeural: female, friendly and approachable (good for receptionists, assistants)
+- en-US-AvaNeural: female, calm and reassuring (good for doctors, therapists)
+- en-US-AriaNeural: female, expressive and energetic (good for sales, customer service)
+
 Respond with JSON only — no markdown, no extra text:
 {
   "name": "character first name",
   "role": "their role/title in this scenario",
   "personality": "2-3 sentence personality description",
-  "systemPrompt": "You are {name}, {role}. {personality} The user has described this scenario: ${sanitized}. Stay in character. Speak naturally and realistically. Keep responses concise (2-4 sentences). Do not break character."
+  "systemPrompt": "You are {name}, {role}. {personality} The user has described this scenario: ${sanitized}. Stay in character. Speak naturally and realistically. Keep responses concise (2-4 sentences). Do not break character.",
+  "voiceId": "one of the six voice IDs listed above",
+  "gender": "male or female"
 }`;
 
     const response = await anthropic.messages.create({
@@ -52,7 +62,16 @@ Respond with JSON only — no markdown, no extra text:
 
     const raw = response.content[0].type === "text" ? response.content[0].text : "";
 
-    let character: { name: string; role: string; personality: string; systemPrompt: string };
+    const VALID_VOICE_IDS = new Set([
+      "en-US-AndrewNeural",
+      "en-US-BrianNeural",
+      "en-US-RogerNeural",
+      "en-US-EmmaNeural",
+      "en-US-AvaNeural",
+      "en-US-AriaNeural",
+    ]);
+
+    let character: { name: string; role: string; personality: string; systemPrompt: string; voiceId?: string; gender?: string };
     try {
       // Strip potential markdown code fences
       const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
@@ -62,6 +81,11 @@ Respond with JSON only — no markdown, no extra text:
         { error: "Could not generate character. Please try again." },
         { status: 500 }
       );
+    }
+
+    // Validate voiceId — reject unknown values to prevent SSML injection
+    if (character.voiceId && !VALID_VOICE_IDS.has(character.voiceId)) {
+      character.voiceId = undefined;
     }
 
     if (!character.name || !character.role || !character.systemPrompt) {
