@@ -4,9 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { CHARACTERS } from "@/lib/characters";
+import { translations } from "@/lib/i18n";
+import { useLocale } from "@/lib/useLocale";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   ArrowRight,
   Play,
+  Pause,
   Volume2,
   Maximize2,
   Captions,
@@ -16,7 +20,6 @@ import {
   Users,
   X,
   Menu,
-  Globe,
 } from "lucide-react";
 
 // ── Promo countdown — resets daily at midnight ───────────────────────────────
@@ -106,8 +109,24 @@ export default function LandingPage() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [showPromo, setShowPromo] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isVideoPaused, setIsVideoPaused] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
   const countdown = useCountdown();
+  const { lang } = useLocale();
+  const T = translations[lang].landing;
+
+  function toggleHeroVideo() {
+    const video = heroVideoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.play();
+      setIsVideoPaused(false);
+    } else {
+      video.pause();
+      setIsVideoPaused(true);
+    }
+  }
 
   useEffect(() => {
     const dismissed = localStorage.getItem("ola_promo_dismissed");
@@ -260,18 +279,17 @@ export default function LandingPage() {
       {/* ── HERO — VIDEO PLAYER SECTION ───────────────────────────────────── */}
       <section id="how-it-works" className="px-4 md:px-8 pt-10 pb-6 max-w-5xl mx-auto">
         <div className="relative rounded-2xl overflow-hidden bg-[#0d0d0d] border border-white/8" style={{ aspectRatio: "16/9" }}>
-          {/* Character image — placeholder until video is ready */}
-          {/* TODO: Replace <Image> with <video> tag when video asset is ready */}
-          {heroChar?.photo && (
-            <Image
-              src={heroChar.photo}
-              alt="Nadia — OlaLabs character"
-              fill
-              priority
-              className="object-cover object-top"
-              sizes="(max-width: 1024px) 100vw, 1024px"
-            />
-          )}
+          {/* Hero demo video */}
+          <video
+            ref={heroVideoRef}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+          >
+            <source src="/hero-demo.mp4" type="video/mp4" />
+          </video>
 
           {/* Dark cinematic overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/30 to-transparent" />
@@ -284,10 +302,17 @@ export default function LandingPage() {
             <span className="text-white/40 text-[11px] font-semibold uppercase tracking-widest">Conversations</span>
           </div>
 
-          {/* Center play button */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-16 h-16 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-white/25 transition-all cursor-pointer">
-              <Play size={22} className="text-white ml-1" fill="white" />
+          {/* Center play/pause button */}
+          <div
+            className="absolute inset-0 flex items-center justify-center group"
+            onClick={toggleHeroVideo}
+          >
+            <div className={`w-16 h-16 rounded-full backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all cursor-pointer ${isVideoPaused ? "bg-white/25 opacity-100" : "bg-white/10 opacity-0 group-hover:opacity-100"}`}>
+              {isVideoPaused ? (
+                <Play size={22} className="text-white ml-1" fill="white" />
+              ) : (
+                <Pause size={22} className="text-white" fill="white" />
+              )}
             </div>
           </div>
 
