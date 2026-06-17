@@ -28,11 +28,15 @@ export async function POST(req: NextRequest) {
 
     // ── Free Scenario path ─────────────────────────────────────────────────────
     if (scenarioCharacter) {
-      const { name, systemPrompt: scenarioSystemPrompt } = scenarioCharacter as { name: string; systemPrompt: string };
+      const { name, systemPrompt: rawScenarioSystemPrompt } = scenarioCharacter as { name: string; systemPrompt: string };
 
-      if (!scenarioSystemPrompt) {
+      if (!rawScenarioSystemPrompt || typeof rawScenarioSystemPrompt !== "string") {
         return NextResponse.json({ error: "Invalid scenario character." }, { status: 400 });
       }
+
+      // Sanitize client-supplied system prompt to prevent prompt injection.
+      // Truncate to a safe length and strip control characters.
+      const scenarioSystemPrompt = rawScenarioSystemPrompt.slice(0, 1000).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").trim();
 
       const userId = await getUserIdFromRequest(req);
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { anthropic } from "@/lib/claude";
+import { getUserIdFromRequest } from "@/lib/auth-server";
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -8,6 +9,11 @@ export async function POST(req: NextRequest) {
       { error: "Anthropic API key is missing." },
       { status: 500 }
     );
+  }
+
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
