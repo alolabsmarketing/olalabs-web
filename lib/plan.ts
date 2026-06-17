@@ -6,6 +6,7 @@ export interface PlanLimits {
   customCharacters: number
   hasAnalysis: boolean
   hasProgressCharts: boolean
+  scenarioDuration: number // in seconds
 }
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
@@ -15,6 +16,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     customCharacters: 0,
     hasAnalysis: false,
     hasProgressCharts: false,
+    scenarioDuration: 120,
   },
   pro: {
     voiceMinutesPerDay: Infinity,
@@ -22,6 +24,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     customCharacters: 1,
     hasAnalysis: true,
     hasProgressCharts: false,
+    scenarioDuration: 900,
   },
   premium: {
     voiceMinutesPerDay: Infinity,
@@ -29,6 +32,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     customCharacters: 3,
     hasAnalysis: true,
     hasProgressCharts: true,
+    scenarioDuration: Infinity,
   },
 }
 

@@ -24,7 +24,74 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { characterId, customCharacterId, scenario: rawScenario, messages, isInitial, sessionId } = await req.json();
+    const { characterId, customCharacterId, scenarioCharacter, scenario: rawScenario, messages, isInitial, sessionId } = await req.json();
+
+    // ── Free Scenario path ─────────────────────────────────────────────────────
+    if (scenarioCharacter) {
+      const { name, systemPrompt: scenarioSystemPrompt } = scenarioCharacter as { name: string; systemPrompt: string };
+
+      if (!scenarioSystemPrompt) {
+        return NextResponse.json({ error: "Invalid scenario character." }, { status: 400 });
+      }
+
+      const userId = await getUserIdFromRequest(req);
+
+      if (isInitial) {
+        const response = await anthropic.messages.create({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 150,
+          system: scenarioSystemPrompt,
+          messages: [{ role: "user", content: "Start the conversation. You're in the scene. Go." }],
+        });
+        const content = response.content[0].type === "text" ? response.content[0].text : "";
+
+        let newSessionId: string | null = null;
+        if (userId) {
+          const { data: session } = await supabaseAdmin
+            .from("sessions")
+            .insert({ user_id: userId, character_id: "scenario", scenario: name ?? null })
+            .select("id")
+            .single();
+
+          if (session) {
+            newSessionId = session.id;
+            await supabaseAdmin.from("messages").insert({
+              session_id: session.id,
+              role: "assistant",
+              content,
+            });
+          }
+        }
+
+        return NextResponse.json({ content, sessionId: newSessionId });
+      }
+
+      let apiMessages = (messages as Array<{ role: string; content: string }>).map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+      if (apiMessages.length > 0 && apiMessages[0].role === "assistant") {
+        apiMessages = [{ role: "user", content: "Begin the session." }, ...apiMessages];
+      }
+
+      const response = await anthropic.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 150,
+        system: scenarioSystemPrompt,
+        messages: apiMessages,
+      });
+      const content = response.content[0].type === "text" ? response.content[0].text : "";
+
+      if (userId && sessionId) {
+        const lastUserMessage = (messages as Array<{ role: string; content: string }>)[messages.length - 1];
+        await supabaseAdmin.from("messages").insert([
+          { session_id: sessionId, role: "user", content: lastUserMessage.content },
+          { session_id: sessionId, role: "assistant", content },
+        ]);
+      }
+
+      return NextResponse.json({ content });
+    }
 
     // ── Custom character path ──────────────────────────────────────────────────
     if (customCharacterId) {

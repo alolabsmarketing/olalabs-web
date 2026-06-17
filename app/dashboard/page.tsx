@@ -4,12 +4,15 @@ import { redirect } from "next/navigation";
 import { CHARACTERS } from "@/lib/characters";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { translations, parseLang } from "@/lib/i18n";
 import { MessageCircle, Clock, Star, Check, Zap, Flame } from "lucide-react";
 import CheckoutButton from "@/components/CheckoutButton";
 import { canUseCharacter, getCustomCharacterLimit } from "@/lib/plan";
 import CharacterCard from "@/components/CharacterCard";
 import CustomCharacterCard from "@/components/CustomCharacterCard";
+import DashboardTabs from "@/components/DashboardTabs";
+import UsageBar from "@/components/UsageBar";
 import type { DbCustomCharacter } from "@/lib/db-types";
 
 function calculateStreak(dates: Array<{ date: string }>): number {
@@ -114,6 +117,9 @@ async function getUserData() {
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
+  // NEXT_LOCALE is set by the LanguageSwitcher component (new i18n system)
+  // "lang" is the legacy cookie for profile-based language preference
+  const nextLocaleCookie = cookieStore.get("NEXT_LOCALE")?.value;
   const cookieLang = cookieStore.get("lang")?.value;
   const userData = await getUserData();
 
@@ -123,7 +129,8 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const lang = parseLang(userData?.language ?? cookieLang);
+  // Priority: profile language > NEXT_LOCALE (switcher) > legacy lang cookie
+  const lang = parseLang(userData?.language ?? nextLocaleCookie ?? cookieLang);
   const T = translations[lang];
   const Td = T.dashboard;
 
@@ -135,6 +142,7 @@ export default async function DashboardPage() {
         <nav className="flex items-center gap-5 text-white/50 text-sm">
           <Link href="/dashboard" className="text-white font-medium">{Td.nav.home}</Link>
           <Link href="/dashboard#characters" className="hover:text-white transition-colors">{Td.nav.practice}</Link>
+          <LanguageSwitcher compact />
           {userData && (
             <ProfileDropdown email={userData.email} displayName={userData.displayName ?? undefined} plan={userData.plan} lang={lang} />
           )}
@@ -219,80 +227,79 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* My Characters */}
-        <div className="mb-10">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <h2 className="text-white font-semibold text-base">My Characters</h2>
-              {userData.plan === "free" && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#a78bfa]/15 text-[#a78bfa] border border-[#a78bfa]/25">
-                  PRO
-                </span>
-              )}
-            </div>
-            {getCustomCharacterLimit(userData.plan) > 0 && (
-              <span className="text-white/30 text-xs">
-                {userData.customCharacters.length} / {getCustomCharacterLimit(userData.plan)} used
-              </span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Existing custom characters */}
-            {userData.customCharacters.map((char: DbCustomCharacter) => (
-              <CustomCharacterCard key={char.id} character={char} />
-            ))}
-
-            {/* Add new slot */}
-            {getCustomCharacterLimit(userData.plan) > 0 &&
-              userData.customCharacters.length < getCustomCharacterLimit(userData.plan) && (
-                <Link href="/characters/new">
-                  <div className="aspect-[3/4] flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 text-white/30 hover:border-white/25 hover:text-white/60 hover:bg-white/3 transition-all cursor-pointer">
-                    <span className="text-2xl leading-none">＋</span>
-                    <span className="text-xs font-medium">Add character</span>
-                  </div>
-                </Link>
-              )}
-
-            {/* Upgrade prompt if free */}
-            {getCustomCharacterLimit(userData.plan) === 0 && (
-              <div className="aspect-[3/4] flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/8 text-white/20">
-                <span className="text-2xl leading-none">✦</span>
-                <span className="text-xs font-medium">Available on Pro</span>
-              </div>
-            )}
-
-            {/* Locked premium slots for pro users */}
-            {userData.plan === "pro" &&
-              Array.from({ length: getCustomCharacterLimit("premium") - getCustomCharacterLimit("pro") }).map((_, i) => (
-                <div
-                  key={i}
-                  className="aspect-[3/4] flex flex-col items-center justify-center gap-2 rounded-2xl border border-white/5 text-white/15 bg-white/[0.01]"
-                >
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/30">
-                    ✦ Premium
-                  </span>
-                </div>
-              ))}
-          </div>
-        </div>
-
-        {/* Characters */}
+        {/* Characters + My Characters + Free Scenario tabs */}
         <div className="mb-10" id="characters">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-white font-semibold text-base">{Td.allCharacters}</h2>
-            <span className="text-white/30 text-xs">{CHARACTERS.length} characters</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {CHARACTERS.map((char) => (
-              <CharacterCard
-                key={char.id}
-                character={char}
-                locked={!canUseCharacter(userData?.plan, char.id)}
-                label={Td.start}
-              />
-            ))}
-          </div>
+          <DashboardTabs
+            plan={userData.plan}
+            charactersSection={
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-white font-semibold text-base">{Td.allCharacters}</h2>
+                  <span className="text-white/30 text-xs">{CHARACTERS.length} characters</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {CHARACTERS.map((char) => (
+                    <CharacterCard
+                      key={char.id}
+                      character={char}
+                      locked={!canUseCharacter(userData?.plan, char.id)}
+                      label={Td.start}
+                    />
+                  ))}
+                </div>
+              </div>
+            }
+            myCharactersSection={
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-white font-semibold text-base">My Characters</h2>
+                    {userData.plan === "free" && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#a78bfa]/15 text-[#a78bfa] border border-[#a78bfa]/25">
+                        PRO
+                      </span>
+                    )}
+                  </div>
+                  {getCustomCharacterLimit(userData.plan) > 0 && (
+                    <span className="text-white/30 text-xs">
+                      {userData.customCharacters.length} / {getCustomCharacterLimit(userData.plan)} used
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {userData.customCharacters.map((char: DbCustomCharacter) => (
+                    <CustomCharacterCard key={char.id} character={char} />
+                  ))}
+                  {getCustomCharacterLimit(userData.plan) > 0 &&
+                    userData.customCharacters.length < getCustomCharacterLimit(userData.plan) && (
+                      <Link href="/characters/new">
+                        <div className="aspect-[3/4] flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 text-white/30 hover:border-white/25 hover:text-white/60 hover:bg-white/3 transition-all cursor-pointer">
+                          <span className="text-2xl leading-none">＋</span>
+                          <span className="text-xs font-medium">Add character</span>
+                        </div>
+                      </Link>
+                    )}
+                  {getCustomCharacterLimit(userData.plan) === 0 && (
+                    <div className="aspect-[3/4] flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/8 text-white/20">
+                      <span className="text-2xl leading-none">✦</span>
+                      <span className="text-xs font-medium">Available on Pro</span>
+                    </div>
+                  )}
+                  {userData.plan === "pro" &&
+                    Array.from({ length: getCustomCharacterLimit("premium") - getCustomCharacterLimit("pro") }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="aspect-[3/4] flex flex-col items-center justify-center gap-2 rounded-2xl border border-white/5 text-white/15 bg-white/[0.01]"
+                      >
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/30">
+                          ✦ Premium
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            }
+          />
         </div>
 
         {/* Plans */}
@@ -353,6 +360,7 @@ export default async function DashboardPage() {
           })}
         </div>
       </div>
+      <UsageBar />
     </div>
   );
 }

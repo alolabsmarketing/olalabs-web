@@ -5,6 +5,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { GoogleButton } from "@/components/GoogleButton";
+import { translations } from "@/lib/i18n";
+import { useLocale } from "@/lib/useLocale";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -13,6 +16,8 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { lang } = useLocale();
+  const T = translations[lang].register;
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -37,13 +42,16 @@ export default function RegisterPage() {
   return (
     <div className="bg-[#080808] flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="relative text-center mb-8">
           <Link href="/" className="text-white font-bold text-3xl tracking-tight">OLA</Link>
-          <p className="text-white/60 text-sm mt-2">Start your language journey</p>
+          <p className="text-white/60 text-sm mt-2">{T.tagline}</p>
+          <div className="absolute right-0 top-0">
+            <LanguageSwitcher />
+          </div>
         </div>
 
         <div className="rounded-2xl bg-[#111] border border-white/8 p-8">
-          <h2 className="text-white text-xl font-semibold mb-6">Create your account</h2>
+          <h2 className="text-white text-xl font-semibold mb-6">{T.heading}</h2>
 
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-sm">
@@ -55,37 +63,37 @@ export default function RegisterPage() {
 
           <div className="flex items-center gap-3 mb-5">
             <div className="flex-1 h-px bg-white/10" />
-            <span className="text-white/30 text-xs">or</span>
+            <span className="text-white/30 text-xs">{T.or}</span>
             <div className="flex-1 h-px bg-white/10" />
           </div>
 
           <form onSubmit={handleRegister} className="space-y-4">
             <div>
-              <label className="block text-white/70 text-sm mb-1.5">Full name</label>
+              <label className="block text-white/70 text-sm mb-1.5">{T.nameLabel}</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                placeholder="Your name"
+                placeholder={T.namePlaceholder}
                 className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400/60 transition-colors text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-white/70 text-sm mb-1.5">Email</label>
+              <label className="block text-white/70 text-sm mb-1.5">{T.emailLabel}</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="you@example.com"
+                placeholder={T.emailPlaceholder}
                 className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400/60 transition-colors text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-white/70 text-sm mb-1.5">Password</label>
+              <label className="block text-white/70 text-sm mb-1.5">{T.passwordLabel}</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -93,7 +101,7 @@ export default function RegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={8}
-                  placeholder="At least 8 characters"
+                  placeholder={T.passwordPlaceholder}
                   className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400/60 transition-colors text-sm pr-10"
                 />
                 <button
@@ -111,19 +119,19 @@ export default function RegisterPage() {
               disabled={loading}
               className="w-full py-2.5 rounded-xl bg-white text-[#07112b] font-semibold text-sm hover:bg-white/90 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
             >
-              {loading ? "Creating account..." : <>Get started free <ArrowRight size={14} /></>}
+              {loading ? T.creatingAccount : <>{T.getStartedFree} <ArrowRight size={14} /></>}
             </button>
           </form>
 
           <p className="text-center text-white/50 text-sm mt-6">
-            Already have an account?{" "}
+            {T.alreadyHaveAccount}{" "}
             <Link href="/login" className="text-blue-400 hover:text-blue-300">
-              Sign in
+              {T.signIn}
             </Link>
           </p>
 
           <p className="text-center text-white/30 text-xs mt-4">
-            By creating an account, you agree to our Terms of Service and Privacy Policy.
+            {T.terms}
           </p>
         </div>
       </div>

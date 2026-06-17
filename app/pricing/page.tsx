@@ -1,107 +1,92 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import CheckoutButton from "@/components/CheckoutButton";
+import { getServerLocale } from "@/lib/locale-server";
+import { translations } from "@/lib/i18n";
 
-const PLANS = [
+const PLAN_META = [
   {
-    name: "Free", price: "$0", salePrice: null, period: "",
-    description: "Start for free, no card needed",
+    id: "free" as const,
+    price: "$0",
+    salePrice: null,
+    period: "",
     bgClass: "bg-white/[0.03]",
     borderClass: "border-white/[0.08]",
     checkClass: "text-white/30",
-    features: [
-      "3 sessions per day",
-      "5 minutes per session",
-      "10 minutes voice / day",
-      "2 characters — Ethan & Noah",
-      "All practice scenarios",
-    ],
     ctaType: "link" as const,
     ctaHref: "/register",
-    ctaLabel: "Get started",
     ctaClass: "bg-white/10 hover:bg-white/20 text-white",
   },
   {
-    name: "Pro", price: "$9", salePrice: "$4.50", period: "/month",
-    description: "For daily learners — 1-2 hours a day",
+    id: "pro" as const,
+    price: "$9",
+    salePrice: "$4.50",
+    period: "/month",
     bgClass: "bg-white/[0.06]",
     borderClass: "border-white/[0.15]",
     checkClass: "text-blue-400",
-    badge: "Most Popular",
-    features: [
-      "10 sessions per day",
-      "20 minutes per session",
-      "Unlimited voice practice",
-      "All 6 AI characters",
-      "Session analysis & feedback",
-      "All practice scenarios",
-    ],
     ctaType: "checkout" as const,
     ctaPlan: "pro" as const,
-    ctaLabel: "Start Pro",
     ctaClass: "bg-indigo-600 hover:bg-indigo-500 text-white",
   },
   {
-    name: "Premium", price: "$19", salePrice: "$9.50", period: "/month",
-    description: "For serious learners — no limits",
+    id: "premium" as const,
+    price: "$19",
+    salePrice: "$9.50",
+    period: "/month",
     bgClass: "bg-white/[0.04]",
     borderClass: "border-amber-500/20",
     checkClass: "text-amber-400",
-    features: [
-      "Unlimited sessions & time",
-      "Unlimited voice practice",
-      "All 6 AI characters",
-      "Session analysis & feedback",
-      "Progress charts & streaks",
-      "Priority support",
-    ],
     ctaType: "checkout" as const,
     ctaPlan: "premium" as const,
-    ctaLabel: "Start Premium",
     ctaClass: "bg-amber-500 hover:bg-amber-400 text-white",
   },
 ] as const;
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const lang = await getServerLocale();
+  const T = translations[lang].pricing;
+
   return (
     <div className="bg-[#080808] min-h-screen">
       <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 h-14 border-b border-white/[0.06] bg-[#080808]/95 backdrop-blur-md">
         <Link href="/" className="text-white font-bold text-xl tracking-tight">olalabs</Link>
-        <Link href="/dashboard" className="text-white/50 hover:text-white text-sm transition-colors">Dashboard</Link>
+        <Link href="/dashboard" className="text-white/50 hover:text-white text-sm transition-colors">{T.dashboard}</Link>
       </header>
       <div className="max-w-5xl mx-auto px-6 py-16 pt-24">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-white mb-3">Simple pricing</h1>
+          <h1 className="text-4xl font-bold text-white mb-3">{T.heading}</h1>
           <p className="text-white/50">
-            <span className="text-[#f5c518] font-semibold">50% off</span> — limited time offer. Start free, upgrade when you&apos;re ready.
+            <span className="text-[#f5c518] font-semibold">50% off</span> — {T.subtext("50%").replace("50% off — ", "")}
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {PLANS.map((plan) => {
-            const showSale = plan.salePrice !== null;
+          {PLAN_META.map((meta) => {
+            const plan = T.plans[meta.id];
+            const showSale = meta.salePrice !== null;
             return (
-              <div key={plan.name} className={`relative ${plan.bgClass} border ${plan.borderClass} rounded-2xl p-8`}>
-                {"badge" in plan && plan.badge && (
+              <div key={meta.id} className={`relative ${meta.bgClass} border ${meta.borderClass} rounded-2xl p-8`}>
+                {plan.badge && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                     {plan.badge}
                   </div>
                 )}
                 <div className="mb-6">
-                  <div className="text-white/50 text-sm font-semibold uppercase tracking-wider mb-1">{plan.name}</div>
+                  <div className="text-white/50 text-sm font-semibold uppercase tracking-wider mb-1">{meta.id.charAt(0).toUpperCase() + meta.id.slice(1)}</div>
                   {showSale ? (
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-bold text-white">{plan.salePrice}</span>
-                      <span className="text-base font-normal text-white/40 line-through">{plan.price}</span>
-                      <span className="text-base font-normal text-white/40">{plan.period}</span>
+                      <span className="text-4xl font-bold text-white">{meta.salePrice}</span>
+                      <span className="text-base font-normal text-white/40 line-through">{meta.price}</span>
+                      <span className="text-base font-normal text-white/40">{meta.period}</span>
                     </div>
                   ) : (
                     <div className="text-4xl font-bold text-white">
-                      {plan.price}<span className="text-base font-normal text-white/40">{plan.period}</span>
+                      {meta.price}<span className="text-base font-normal text-white/40">{meta.period}</span>
                     </div>
                   )}
                   {showSale && (
                     <div className="mt-1 inline-flex items-center gap-1 bg-[#f5c518]/10 border border-[#f5c518]/20 text-[#f5c518] text-xs font-semibold px-2 py-0.5 rounded-full">
-                      50% off — limited offer
+                      {T.limitedOffer("50%")}
                     </div>
                   )}
                   <div className="text-white/40 text-sm mt-1">{plan.description}</div>
@@ -109,18 +94,18 @@ export default function PricingPage() {
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-center gap-2 text-sm text-white/70">
-                      <Check size={14} className={`${plan.checkClass} flex-shrink-0`} />{f}
+                      <Check size={14} className={`${meta.checkClass} flex-shrink-0`} />{f}
                     </li>
                   ))}
                 </ul>
-                {plan.ctaType === "link" ? (
-                  <Link href={plan.ctaHref}
-                    className={`block w-full text-center py-3 rounded-xl font-semibold text-sm transition-colors ${plan.ctaClass}`}>
+                {meta.ctaType === "link" ? (
+                  <Link href={(meta as { ctaHref?: string }).ctaHref ?? "/register"}
+                    className={`block w-full text-center py-3 rounded-xl font-semibold text-sm transition-colors ${meta.ctaClass}`}>
                     {plan.ctaLabel}
                   </Link>
                 ) : (
-                  <CheckoutButton plan={plan.ctaPlan} label={plan.ctaLabel}
-                    className={`w-full py-3 rounded-xl font-semibold text-sm ${plan.ctaClass}`} />
+                  <CheckoutButton plan={(meta as { ctaPlan?: "pro" | "premium" }).ctaPlan ?? "pro"} label={plan.ctaLabel}
+                    className={`w-full py-3 rounded-xl font-semibold text-sm ${meta.ctaClass}`} />
                 )}
               </div>
             );

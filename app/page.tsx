@@ -165,9 +165,9 @@ export default function LandingPage() {
       {showPromo && countdown.mounted && (
         <div className="relative bg-[#f5c518] text-[#080808] py-2.5 px-4">
           <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Limited time offer</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">{T.promo.limitedTime}</span>
             <p className="font-bold text-sm sm:text-base">
-              Get <span className="text-lg font-extrabold">50% off</span> on all plans.
+              {T.promo.getOff("50%")}
             </p>
             <div className="flex items-center gap-3">
               <TimeUnit value={countdown.h} label="hrs" />
@@ -180,7 +180,7 @@ export default function LandingPage() {
               href="/pricing"
               className="flex items-center gap-1.5 px-4 py-1.5 bg-[#080808] text-[#f5c518] text-sm font-bold rounded-full hover:bg-[#080808]/80 transition-all"
             >
-              Claim Now <ArrowRight size={12} />
+              {T.promo.claimNow} <ArrowRight size={12} />
             </Link>
           </div>
           <button
@@ -204,23 +204,20 @@ export default function LandingPage() {
             onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}
             className="text-white/45 hover:text-white transition-colors"
           >
-            How it works
+            {T.nav.howItWorks}
           </button>
           <button
             onClick={() => document.getElementById("characters")?.scrollIntoView({ behavior: "smooth" })}
             className="text-white/45 hover:text-white transition-colors"
           >
-            Characters
+            {T.nav.characters}
           </button>
-          <Link href="/pricing" className="text-white/45 hover:text-white transition-colors">Pricing</Link>
+          <Link href="/pricing" className="text-white/45 hover:text-white transition-colors">{T.nav.pricing}</Link>
         </nav>
 
         <div className="flex items-center gap-3">
-          {/* Language indicator */}
-          <div className="hidden sm:flex items-center gap-1.5 text-white/30 text-xs">
-            <Globe size={12} />
-            <span>EN</span>
-          </div>
+          {/* Language switcher */}
+          <LanguageSwitcher compact className="hidden sm:flex" />
 
           {isLoggedIn === null ? (
             <div className="w-24 h-8 rounded-full bg-white/6 animate-pulse" />
@@ -229,18 +226,18 @@ export default function LandingPage() {
               href="/dashboard"
               className="flex items-center gap-1.5 px-4 py-1.5 bg-[#f5c518] text-[#080808] text-sm font-bold rounded-full hover:bg-[#f5c518]/90 transition-all"
             >
-              Dashboard <ArrowRight size={12} />
+              {T.nav.dashboard} <ArrowRight size={12} />
             </Link>
           ) : (
             <>
               <Link href="/login" className="hidden sm:block text-white/50 hover:text-white text-sm transition-colors">
-                Sign in
+                {T.nav.signIn}
               </Link>
               <Link
                 href="/register"
                 className="flex items-center gap-1.5 px-4 py-1.5 bg-[#f5c518] text-[#080808] text-sm font-bold rounded-full hover:bg-[#f5c518]/90 transition-all"
               >
-                Get started <ArrowRight size={12} />
+                {T.nav.getStarted} <ArrowRight size={12} />
               </Link>
             </>
           )}
@@ -256,10 +253,10 @@ export default function LandingPage() {
             {menuOpen && (
               <div className="absolute right-0 top-10 w-44 rounded-xl bg-[#111] border border-white/10 py-1 shadow-xl">
                 {[
-                  { label: "How it works", href: "#how-it-works" },
-                  { label: "Characters", href: "#characters" },
-                  { label: "Pricing", href: "/pricing" },
-                  { label: isLoggedIn ? "Dashboard" : "Sign in", href: isLoggedIn ? "/dashboard" : "/login" },
+                  { label: T.nav.howItWorks, href: "#how-it-works" },
+                  { label: T.nav.characters, href: "#characters" },
+                  { label: T.nav.pricing, href: "/pricing" },
+                  { label: isLoggedIn ? T.nav.dashboard : T.nav.signIn, href: isLoggedIn ? "/dashboard" : "/login" },
                 ].map((item) => (
                   <Link
                     key={item.label}
@@ -319,11 +316,11 @@ export default function LandingPage() {
           {/* Bottom text */}
           <div className="absolute bottom-16 left-5 md:left-8 max-w-xs">
             <h1 className="text-white font-bold text-3xl md:text-4xl leading-[1.1] mb-2">
-              Speak <span className="text-[#f5c518]">naturally.</span>
-              <br />Connect confidently.
+              {T.hero.headline1} <span className="text-[#f5c518]">{T.hero.headline2}</span>
+              <br />{T.hero.headline3}
             </h1>
             <p className="text-white/50 text-sm leading-relaxed">
-              Real conversations. Real progress. Real you.
+              {T.hero.tagline}
             </p>
           </div>
 
@@ -356,13 +353,13 @@ export default function LandingPage() {
             {/* Left: copy + CTA */}
             <div className="p-8 md:p-10 flex flex-col justify-between">
               <div>
-                <span className="text-[#f5c518] text-[10px] font-bold uppercase tracking-widest mb-4 block">Try it now</span>
+                <span className="text-[#f5c518] text-[10px] font-bold uppercase tracking-widest mb-4 block">{T.tryItNow.badge}</span>
                 <h2 className="text-white font-bold text-3xl md:text-4xl leading-[1.1] mb-4">
-                  Start speaking<br />
-                  <span className="text-[#f5c518]">in minutes.</span>
+                  {T.tryItNow.heading1}<br />
+                  <span className="text-[#f5c518]">{T.tryItNow.heading2}</span>
                 </h2>
                 <p className="text-white/45 text-sm leading-relaxed mb-8">
-                  Jump into a real conversation and feel the difference.
+                  {T.tryItNow.subtext}
                 </p>
               </div>
 
@@ -396,7 +393,7 @@ export default function LandingPage() {
                   href={isLoggedIn ? "/dashboard" : "/register"}
                   className="inline-flex items-center gap-2 px-5 py-3 bg-[#f5c518] text-[#080808] font-bold text-sm rounded-full hover:bg-[#f5c518]/90 transition-all"
                 >
-                  Start a Conversation <ArrowRight size={14} />
+                  {T.tryItNow.cta} <ArrowRight size={14} />
                 </Link>
               </div>
             </div>
@@ -446,20 +443,20 @@ export default function LandingPage() {
       <section id="characters" className="px-4 md:px-8 py-10 max-w-5xl mx-auto">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <span className="text-[#f5c518] text-[10px] font-bold uppercase tracking-widest mb-2 block">Practice your way</span>
-            <h2 className="text-white font-bold text-3xl md:text-4xl">Build real skills.</h2>
+            <span className="text-[#f5c518] text-[10px] font-bold uppercase tracking-widest mb-2 block">{T.buildSkills.badge}</span>
+            <h2 className="text-white font-bold text-3xl md:text-4xl">{T.buildSkills.heading}</h2>
           </div>
           <Link href="/dashboard" className="hidden sm:flex items-center gap-1.5 text-white/40 hover:text-white text-sm transition-colors">
-            See all <ArrowRight size={13} />
+            {T.buildSkills.seeAll} <ArrowRight size={13} />
           </Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { char: CHARACTERS.find((c) => c.id === "ethan")!, icon: MessageCircle, label: "English Tutor", desc: "Real-life conversations" },
-            { char: CHARACTERS.find((c) => c.id === "nadia")!, icon: Users, label: "Job Interviews", desc: "Practice with a recruiter" },
-            { char: CHARACTERS.find((c) => c.id === "dr-chen")!, icon: BookOpen, label: "Medical Talks", desc: "Describe symptoms clearly" },
-            { char: CHARACTERS.find((c) => c.id === "morgan")!, icon: Headphones, label: "Visa Interview", desc: "Answer under pressure" },
+            { char: CHARACTERS.find((c) => c.id === "ethan")!, icon: MessageCircle, label: T.buildSkills.cards.englishTutor.label, desc: T.buildSkills.cards.englishTutor.desc },
+            { char: CHARACTERS.find((c) => c.id === "nadia")!, icon: Users, label: T.buildSkills.cards.jobInterviews.label, desc: T.buildSkills.cards.jobInterviews.desc },
+            { char: CHARACTERS.find((c) => c.id === "dr-chen")!, icon: BookOpen, label: T.buildSkills.cards.medicalTalks.label, desc: T.buildSkills.cards.medicalTalks.desc },
+            { char: CHARACTERS.find((c) => c.id === "morgan")!, icon: Headphones, label: T.buildSkills.cards.visaInterview.label, desc: T.buildSkills.cards.visaInterview.desc },
           ].map(({ char, icon: Icon, label, desc }) => (
             <Link
               key={label}
@@ -499,9 +496,9 @@ export default function LandingPage() {
         <div className="rounded-2xl bg-[#111] border border-white/6 px-6 py-5">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
-              { value: "120K+", label: "Active learners" },
-              { value: "30+", label: "Languages" },
-              { value: "4.9", label: "User rating", star: true },
+              { value: "120K+", label: T.stats.activeLearners },
+              { value: "30+", label: T.stats.languages },
+              { value: "4.9", label: T.stats.userRating, star: true },
             ].map(({ value, label, star }) => (
               <div key={label} className="flex flex-col items-center text-center">
                 <span className="text-white font-bold text-xl">
@@ -525,7 +522,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <Link href="/register" className="text-[#f5c518] text-xs font-semibold hover:underline">
-                Join a global community!
+                {T.stats.joinCommunity}
               </Link>
             </div>
           </div>
@@ -537,24 +534,24 @@ export default function LandingPage() {
         <div className="rounded-2xl border border-white/8 bg-[#111] p-10 text-center">
           {isLoggedIn ? (
             <>
-              <h3 className="text-white text-2xl font-bold mb-2">Continue your journey</h3>
-              <p className="text-white/40 text-sm mb-6">Pick up where you left off.</p>
+              <h3 className="text-white text-2xl font-bold mb-2">{T.cta.loggedInHeading}</h3>
+              <p className="text-white/40 text-sm mb-6">{T.cta.loggedInSub}</p>
               <Link
                 href="/dashboard"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-[#f5c518] text-[#080808] font-bold rounded-full hover:bg-[#f5c518]/90 transition-all text-sm"
               >
-                Go to Dashboard <ArrowRight size={14} />
+                {T.cta.loggedInBtn} <ArrowRight size={14} />
               </Link>
             </>
           ) : (
             <>
-              <h3 className="text-white text-2xl font-bold mb-2">Ready to start speaking?</h3>
-              <p className="text-white/40 text-sm mb-6">Free plan — no credit card required.</p>
+              <h3 className="text-white text-2xl font-bold mb-2">{T.cta.heading}</h3>
+              <p className="text-white/40 text-sm mb-6">{T.cta.sub}</p>
               <Link
                 href="/register"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-[#f5c518] text-[#080808] font-bold rounded-full hover:bg-[#f5c518]/90 transition-all text-sm"
               >
-                Create free account <ArrowRight size={14} />
+                {T.cta.btn} <ArrowRight size={14} />
               </Link>
             </>
           )}
@@ -565,13 +562,13 @@ export default function LandingPage() {
       <footer className="border-t border-white/6 px-5 md:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
         <span className="text-white/25 text-sm font-bold">olalabs</span>
         <div className="flex items-center gap-6 text-white/25 text-xs">
-          <Link href="/pricing" className="hover:text-white/50 transition-colors">Pricing</Link>
+          <Link href="/pricing" className="hover:text-white/50 transition-colors">{T.footer.pricing}</Link>
           {isLoggedIn ? (
-            <Link href="/dashboard" className="hover:text-white/50 transition-colors">Dashboard</Link>
+            <Link href="/dashboard" className="hover:text-white/50 transition-colors">{T.footer.dashboard}</Link>
           ) : (
             <>
-              <Link href="/login" className="hover:text-white/50 transition-colors">Sign in</Link>
-              <Link href="/register" className="hover:text-white/50 transition-colors">Register</Link>
+              <Link href="/login" className="hover:text-white/50 transition-colors">{T.footer.signIn}</Link>
+              <Link href="/register" className="hover:text-white/50 transition-colors">{T.footer.register}</Link>
             </>
           )}
         </div>

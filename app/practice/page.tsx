@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
 import { translations, parseLang } from "@/lib/i18n";
 import { Send, Mic, MicOff, ArrowLeft, BarChart2, Volume2, VolumeX, Square, RotateCcw } from "lucide-react";
 import UpgradeModal, { type UpgradeReason } from "@/components/UpgradeModal";
-import { getPlanLimits } from "@/lib/plan";
+import { getPlanLimits, PLAN_LIMITS } from "@/lib/plan";
+import UsageBar from "@/components/UsageBar";
 
 function useLang() {
   return useMemo(() => {
@@ -64,20 +65,34 @@ function VoiceWave({ active }: { active: boolean }) {
   );
 }
 
+interface ScenarioCharacter {
+  name: string;
+  role: string;
+  personality: string;
+  systemPrompt: string;
+}
+
 function PracticeContent() {
   const searchParams = useSearchParams();
   const characterParam = searchParams.get("character");
   const characterId = characterParam ?? "ethan";
   const customCharacterId = searchParams.get("customCharacter") ?? null;
   const autoMode = searchParams.get("auto") === "true";
+  const scenarioMode = searchParams.get("scenarioMode") === "true";
+  const scenarioCharacterParam = searchParams.get("scenarioCharacter");
+  const scenarioCharacter: ScenarioCharacter | null = (() => {
+    if (!scenarioCharacterParam) return null;
+    try { return JSON.parse(decodeURIComponent(scenarioCharacterParam)) as ScenarioCharacter; }
+    catch { return null; }
+  })();
   const character = CHARACTERS.find((c) => c.id === characterId) ?? CHARACTERS[0];
   const lang = useLang();
   const T = translations[lang].practice;
   const router = useRouter();
 
   useEffect(() => {
-    if (!characterParam) router.replace("/dashboard");
-  }, [characterParam, router]);
+    if (!characterParam && !scenarioMode) router.replace("/dashboard");
+  }, [characterParam, scenarioMode, router]);
 
   const DEMO_LIMIT = 3;
 
@@ -92,6 +107,8 @@ function PracticeContent() {
   const [scenario, setScenario] = useState("");
   // Scenario selection removed — characters start directly without scene selection
   const [scenarioSet, setScenarioSet] = useState(true);
+  const [scenarioTimeUp, setScenarioTimeUp] = useState(false);
+  const [scenarioPlan, setScenarioPlan] = useState<string>("free");
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysis, setAnalysis] = useState<Record<string, unknown> | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
@@ -134,6 +151,7 @@ function PracticeContent() {
         if (d.loggedIn) {
           const limits = getPlanLimits(d.plan);
           setCanAnalyze(limits.hasAnalysis);
+          setScenarioPlan(d.plan ?? "free");
         } else {
           const stored = parseInt(localStorage.getItem("ola_demo_count") ?? "0", 10);
           setDemoCount(stored);
@@ -143,15 +161,32 @@ function PracticeContent() {
       .catch(() => setIsLoggedIn(false));
   }, []);
 
+  // Scenario session duration enforcement
+  useEffect(() => {
+    if (!scenarioMode || !scenarioCharacter) return;
+    const plan = scenarioPlan as "free" | "pro" | "premium";
+    const durationSec = PLAN_LIMITS[plan]?.scenarioDuration ?? 120;
+    if (!isFinite(durationSec)) return;
+    const timer = setTimeout(() => {
+      setScenarioTimeUp(true);
+      setSessionEnded(true);
+    }, durationSec * 1000);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenarioMode, scenarioPlan, initialized]);
+
   const sendInitialGreeting = useCallback(async () => {
     if (initialized) return;
     setInitialized(true);
     setLoading(true);
     try {
+      const body = scenarioCharacter
+        ? { scenarioCharacter, messages: [], isInitial: true }
+        : { characterId, customCharacterId, scenario, messages: [], isInitial: true };
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characterId, customCharacterId, scenario, messages: [], isInitial: true }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { error?: string };
@@ -169,7 +204,7 @@ function PracticeContent() {
       setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [characterId, scenario, initialized]);
+  }, [characterId, scenario, initialized, scenarioCharacter]);
 
   useEffect(() => {
     if (scenarioSet && !initialized) {
@@ -263,10 +298,13 @@ function PracticeContent() {
     setLoading(true);
 
     try {
+      const msgBody = scenarioCharacter
+        ? { scenarioCharacter, messages: updated, sessionId }
+        : { characterId, customCharacterId, scenario, messages: updated, sessionId };
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characterId, customCharacterId, scenario, messages: updated, sessionId }),
+        body: JSON.stringify(msgBody),
       });
       const data = await res.json();
       const content: string =
@@ -345,11 +383,23 @@ function PracticeContent() {
           <Link href="/dashboard" className="text-white/60 hover:text-white transition-colors mr-1">
             <ArrowLeft size={18} />
           </Link>
-          <CharacterDot characterId={character.id} size={36} />
+          {scenarioMode && scenarioCharacter ? (
+            <div
+              className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center bg-white/10 border border-white/15 text-white/60 text-sm font-semibold"
+            >
+              {scenarioCharacter.name.charAt(0).toUpperCase()}
+            </div>
+          ) : (
+            <CharacterDot characterId={character.id} size={36} />
+          )}
           <div>
-            <p className="text-white font-semibold text-sm leading-tight">{character.name}</p>
+            <p className="text-white font-semibold text-sm leading-tight">
+              {scenarioMode && scenarioCharacter ? scenarioCharacter.name : character.name}
+            </p>
             <div className="flex items-center gap-1.5">
-              <p className="text-white/40 text-xs">{character.role}</p>
+              <p className="text-white/40 text-xs">
+                {scenarioMode && scenarioCharacter ? scenarioCharacter.role : character.role}
+              </p>
               {isSpeaking && (
                 <span className="text-blue-400 text-xs flex items-center gap-1">
                   <Volume2 size={10} /> {T.speakingBadge}
@@ -527,14 +577,44 @@ function PracticeContent() {
         </div>
       )}
 
+      {/* Scenario time-up banner */}
+      {scenarioTimeUp && (
+        <div className="relative z-10 mx-4 mb-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center max-w-2xl mx-auto">
+          <p className="text-amber-300 text-sm font-medium">
+            {scenarioPlan === "free"
+              ? "Your 2-minute scenario has ended."
+              : "Your scenario session has ended."}
+            {" "}
+            {scenarioPlan === "free" && (
+              <a href="/dashboard#plans" className="underline hover:text-amber-200">Upgrade to continue.</a>
+            )}
+          </p>
+        </div>
+      )}
+
       {/* Input area */}
       <footer className="relative z-10 px-4 pb-5 pt-3 max-w-2xl mx-auto w-full">
-        {voiceMode ? (
+        {sessionEnded && scenarioTimeUp ? (
+          <div className="flex items-center justify-center gap-3 py-3">
+            <a
+              href="/dashboard"
+              className="px-5 py-2.5 rounded-xl bg-white/8 border border-white/12 text-white/60 text-sm hover:bg-white/12 transition-all"
+            >
+              Back to Dashboard
+            </a>
+            <a
+              href="/dashboard#plans"
+              className="px-5 py-2.5 rounded-xl bg-white text-[#07112b] text-sm font-semibold hover:bg-white/90 transition-all"
+            >
+              Upgrade
+            </a>
+          </div>
+        ) : voiceMode ? (
           /* Voice controls */
           <div className="flex flex-col items-center gap-3">
             <button
               onClick={toggleListening}
-              disabled={loading || isSpeaking}
+              disabled={loading || isSpeaking || sessionEnded}
               className={cn(
                 "w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-lg",
                 listening
@@ -572,7 +652,7 @@ function PracticeContent() {
               />
               <button
                 onClick={() => sendMessage(input)}
-                disabled={!input.trim() || loading}
+                disabled={!input.trim() || loading || sessionEnded}
                 className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-30 transition-all"
               >
                 <Send size={14} className="text-white" />
@@ -596,7 +676,7 @@ function PracticeContent() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
                 }}
-                placeholder={`Message ${character.name}...`}
+                placeholder={`Message ${scenarioMode && scenarioCharacter ? scenarioCharacter.name : character.name}...`}
                 rows={1}
                 className="w-full bg-transparent text-white placeholder:text-white/30 focus:outline-none text-sm resize-none"
                 style={{ fieldSizing: "content" } as React.CSSProperties}
@@ -611,7 +691,7 @@ function PracticeContent() {
             </button>
             <button
               onClick={() => sendMessage(input)}
-              disabled={!input.trim() || loading || isLoggedIn === null}
+              disabled={!input.trim() || loading || isLoggedIn === null || sessionEnded}
               className="w-11 h-11 rounded-full bg-white flex items-center justify-center hover:bg-white/90 transition-all disabled:opacity-40 flex-shrink-0"
             >
               <Send size={16} className="text-[#07112b]" />
@@ -719,12 +799,15 @@ function PracticeContent() {
 
 export default function PracticePage() {
   return (
-    <Suspense fallback={
-      <div className="bg-[#080808] flex items-center justify-center min-h-screen">
-        <div className="text-white/50 text-sm">Loading...</div>
-      </div>
-    }>
-      <PracticeContent />
-    </Suspense>
+    <>
+      <Suspense fallback={
+        <div className="bg-[#080808] flex items-center justify-center min-h-screen">
+          <div className="text-white/50 text-sm">Loading...</div>
+        </div>
+      }>
+        <PracticeContent />
+      </Suspense>
+      <UsageBar />
+    </>
   );
 }
