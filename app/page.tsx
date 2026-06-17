@@ -7,6 +7,7 @@ import { CHARACTERS } from "@/lib/characters";
 import { translations } from "@/lib/i18n";
 import { useLocale } from "@/lib/useLocale";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import LandingScenarioForm from "@/components/LandingScenarioForm";
 import {
   ArrowRight,
   Play,
@@ -110,6 +111,7 @@ export default function LandingPage() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [showPromo, setShowPromo] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [landingScenarioText, setLandingScenarioText] = useState("");
   const [isVideoPaused, setIsVideoPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [videoProgress, setVideoProgress] = useState(0);
@@ -547,6 +549,52 @@ export default function LandingPage() {
               </div>
             </Link>
           ))}
+        </div>
+      </section>
+
+      {/* ── FREE SCENARIO ─────────────────────────────────────────────────── */}
+      <section className="px-4 md:px-8 py-12 max-w-5xl mx-auto">
+        <div className="mb-8">
+          <span className="text-[#f5c518] text-[10px] font-bold uppercase tracking-widest mb-3 block">
+            Free Scenario
+          </span>
+          <h2 className="text-white font-bold text-2xl md:text-3xl leading-tight mb-3">
+            Write your own story.<br />
+            <span className="text-white/50">AI creates the character.</span>
+          </h2>
+          <p className="text-white/40 text-sm max-w-md">
+            Describe any situation — job interview, doctor visit, travel — and practice it instantly with an AI character built for that exact moment.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Sol: Örnek chip'ler */}
+          <div className="flex flex-col gap-3">
+            <p className="text-white/30 text-xs uppercase tracking-widest mb-1">Example scenarios</p>
+            {[
+              "I'm interviewing for a senior product manager role at a tech startup.",
+              "I need to explain to my landlord why my rent is late.",
+              "I'm ordering food at a French restaurant and I don't speak French.",
+              "I'm negotiating a salary raise with my manager.",
+              "I need to reschedule a doctor's appointment.",
+            ].map((example) => (
+              <button
+                key={example}
+                onClick={() => setLandingScenarioText(example)}
+                className="text-left px-4 py-3 rounded-xl bg-white/5 border border-white/8 text-white/60 text-sm hover:bg-white/8 hover:text-white/80 hover:border-white/15 transition-all"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+
+          {/* Sağ: Form */}
+          <div className="bg-[#0d0d0d] border border-white/8 rounded-2xl p-6">
+            <LandingScenarioForm
+              value={landingScenarioText}
+              onChange={setLandingScenarioText}
+            />
+          </div>
         </div>
       </section>
 
