@@ -12,6 +12,7 @@ import {
   Play,
   Pause,
   Volume2,
+  VolumeX,
   Maximize2,
   Captions,
   MessageCircle,
@@ -110,6 +111,9 @@ export default function LandingPage() {
   const [showPromo, setShowPromo] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isVideoPaused, setIsVideoPaused] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [videoTime, setVideoTime] = useState({ current: 0, total: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
   const heroVideoRef = useRef<HTMLVideoElement>(null);
   const countdown = useCountdown();
@@ -126,6 +130,44 @@ export default function LandingPage() {
       video.pause();
       setIsVideoPaused(true);
     }
+  }
+
+  function toggleMute() {
+    const v = heroVideoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setIsMuted(v.muted);
+  }
+
+  function toggleFullscreen() {
+    const v = heroVideoRef.current;
+    if (!v) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      v.requestFullscreen();
+    }
+  }
+
+  function handleTimeUpdate() {
+    const v = heroVideoRef.current;
+    if (!v || !v.duration) return;
+    setVideoProgress((v.currentTime / v.duration) * 100);
+    setVideoTime({ current: v.currentTime, total: v.duration });
+  }
+
+  function handleProgressClick(e: React.MouseEvent<HTMLDivElement>) {
+    const v = heroVideoRef.current;
+    if (!v) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    v.currentTime = ratio * v.duration;
+  }
+
+  function formatTime(sec: number) {
+    const m = Math.floor(sec / 60).toString().padStart(2, "0");
+    const s = Math.floor(sec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
   }
 
   useEffect(() => {
@@ -283,6 +325,7 @@ export default function LandingPage() {
             loop
             muted
             playsInline
+            onTimeUpdate={handleTimeUpdate}
             className="absolute inset-0 w-full h-full object-cover"
           >
             <source src="/hero-demo.mp4" type="video/mp4" />
@@ -327,19 +370,35 @@ export default function LandingPage() {
           {/* Video progress bar + controls */}
           <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-gradient-to-t from-[#080808] to-transparent">
             {/* Progress bar */}
-            <div className="w-full h-[3px] bg-white/15 rounded-full mb-3 cursor-pointer">
-              <div className="h-full w-1/12 bg-[#f5c518] rounded-full" />
+            <div
+              className="w-full h-[3px] bg-white/15 rounded-full mb-3 cursor-pointer"
+              onClick={handleProgressClick}
+            >
+              <div
+                className="h-full bg-[#f5c518] rounded-full transition-all duration-100"
+                style={{ width: `${videoProgress}%` }}
+              />
             </div>
             {/* Controls row */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Play size={14} className="text-white/60 cursor-pointer hover:text-white transition-colors" />
-                <Volume2 size={14} className="text-white/60 cursor-pointer hover:text-white transition-colors" />
-                <span className="text-white/35 text-[11px] tabular-nums">00:08 / 01:08</span>
+                {isVideoPaused ? (
+                  <Play size={14} className="text-white/60 cursor-pointer hover:text-white transition-colors" onClick={toggleHeroVideo} />
+                ) : (
+                  <Pause size={14} className="text-white/60 cursor-pointer hover:text-white transition-colors" onClick={toggleHeroVideo} />
+                )}
+                {isMuted ? (
+                  <VolumeX size={14} className="text-white/60 cursor-pointer hover:text-white transition-colors" onClick={toggleMute} />
+                ) : (
+                  <Volume2 size={14} className="text-white/60 cursor-pointer hover:text-white transition-colors" onClick={toggleMute} />
+                )}
+                <span className="text-white/35 text-[11px] tabular-nums">
+                  {formatTime(videoTime.current)} / {formatTime(videoTime.total)}
+                </span>
               </div>
               <div className="flex items-center gap-3">
                 <Captions size={14} className="text-white/60 cursor-pointer hover:text-white transition-colors" />
-                <Maximize2 size={14} className="text-white/60 cursor-pointer hover:text-white transition-colors" />
+                <Maximize2 size={14} className="text-white/60 cursor-pointer hover:text-white transition-colors" onClick={toggleFullscreen} />
               </div>
             </div>
           </div>
